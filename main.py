@@ -10,8 +10,10 @@ from pathlib import Path
 from typing import List
 from database import SessionLocal, engine, Base, WindowRequest, WindowImage
 
-# Initialize Database
-Base.metadata.create_all(bind=engine)
+
+@app.on_event("startup")
+async def startup():
+    Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
