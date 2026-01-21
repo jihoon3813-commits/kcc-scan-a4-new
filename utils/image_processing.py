@@ -1,7 +1,7 @@
-import cv2
 import numpy as np
 
 def detect_reference_object(image_path, ref_type):
+    import cv2
     """
     Simulates detection of reference object.
     Returns (x, y, w, h) of the bounding box.

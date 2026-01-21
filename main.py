@@ -14,9 +14,18 @@ from database import SessionLocal, engine, Base, WindowRequest, WindowImage
 app = FastAPI()
 
 
+app = FastAPI()
+
+# Database initialization (safe for Vercel)
+def init_db():
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"DB Init Warning: {e}")
+
 @app.on_event("startup")
 async def startup():
-    Base.metadata.create_all(bind=engine)
+    init_db()
 
 # Mount Static Files
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -74,6 +83,7 @@ async def proxy_image(url: str):
     }
 
     try:
+        import requests
         res = requests.get(final_url, headers=headers, timeout=15, allow_redirects=True)
         if res.status_code != 200:
             raise HTTPException(status_code=res.status_code, detail=f"Google Drive returned {res.status_code}")
@@ -89,6 +99,7 @@ async def proxy_image(url: str):
         return Response(content=content, media_type=media_type)
     except Exception as e:
         print(f"Proxy Error: {str(e)}")
+        # If requests fails or other error, return 400
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/admin", response_class=HTMLResponse)
