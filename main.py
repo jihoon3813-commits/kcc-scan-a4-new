@@ -38,12 +38,20 @@ def get_db():
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+# Simple in-memory cache to speed up image loading
+image_cache = {}
+
 @app.get("/api/proxy-image")
 async def proxy_image(url: str):
     import requests
     from fastapi import Response, HTTPException
     
-    # 1. Convert to direct link if it's a standard view link
+    # 1. Check cache first
+    if url in image_cache:
+        cached_data = image_cache[url]
+        return Response(content=cached_data["content"], media_type=cached_data["media_type"])
+
+    # 2. Convert to direct link if it's a standard view link
     final_url = url
     if "drive.google.com" in url:
         import re
@@ -51,7 +59,7 @@ async def proxy_image(url: str):
         if match:
             final_url = f"https://drive.google.com/uc?export=view&id={match.group(1)}"
 
-    # 2. Fetch with browser-like headers
+    # 3. Fetch with browser-like headers
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     }
@@ -61,7 +69,15 @@ async def proxy_image(url: str):
         if res.status_code != 200:
             raise HTTPException(status_code=res.status_code, detail=f"Google Drive returned {res.status_code}")
             
-        return Response(content=res.content, media_type=res.headers.get("Content-Type", "image/jpeg"))
+        content = res.content
+        media_type = res.headers.get("Content-Type", "image/jpeg")
+        
+        # Save to cache (limit size to ~50 images to avoid memory issues)
+        if len(image_cache) > 50:
+            image_cache.clear()
+        image_cache[url] = {"content": content, "media_type": media_type}
+            
+        return Response(content=content, media_type=media_type)
     except Exception as e:
         print(f"Proxy Error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))

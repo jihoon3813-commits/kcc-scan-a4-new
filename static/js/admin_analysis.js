@@ -128,11 +128,15 @@ function selectImage(id) {
     const directUrl = getDirectDriveUrl(imgData.image_path);
     console.log("Loading Image URL:", directUrl);
 
+    // Show loading indicator
+    document.getElementById('imageLoadingOverlay').classList.remove('hidden');
+
     img.crossOrigin = "anonymous";
     img.src = directUrl;
 
     img.onload = () => {
         console.log("Image loaded successfully with CORS");
+        document.getElementById('imageLoadingOverlay').classList.add('hidden');
         currentImage = img;
         resizeCanvas();
         fitImageToCanvas();
@@ -143,6 +147,7 @@ function selectImage(id) {
 
     img.onerror = () => {
         console.warn("Image load failed with CORS. Trying fallback...");
+        document.getElementById('imageLoadingOverlay').classList.add('hidden');
         const fallbackImg = new Image();
         fallbackImg.src = directUrl;
         fallbackImg.onload = () => {
