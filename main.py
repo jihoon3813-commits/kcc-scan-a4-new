@@ -13,12 +13,10 @@ from database import SessionLocal, engine, Base, WindowRequest, WindowImage
 
 app = FastAPI()
 
-
-app = FastAPI()
-
 # Database initialization (safe for Vercel)
 def init_db():
     try:
+        from database import engine, Base
         Base.metadata.create_all(bind=engine)
     except Exception as e:
         print(f"DB Init Warning: {e}")
