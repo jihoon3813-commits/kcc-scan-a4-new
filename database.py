@@ -5,7 +5,10 @@ from datetime import datetime
 
 from sqlalchemy.orm import relationship
 
+import os
 SQLALCHEMY_DATABASE_URL = "sqlite:///./requests.db"
+if os.environ.get("VERCEL"):
+    SQLALCHEMY_DATABASE_URL = "sqlite:////tmp/requests.db"
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}

@@ -24,7 +24,13 @@ templates = Jinja2Templates(directory="templates")
 
 # Ensure uploads directory exists
 UPLOAD_DIR = Path("uploads")
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+if os.environ.get("VERCEL"):
+    UPLOAD_DIR = Path("/tmp/uploads")
+
+try:
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+except Exception as e:
+    print(f"Warning: Could not create upload directory: {e}")
 
 # Dependency to get DB session
 def get_db():
