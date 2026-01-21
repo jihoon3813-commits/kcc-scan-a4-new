@@ -11,11 +11,12 @@ from typing import List
 from database import SessionLocal, engine, Base, WindowRequest, WindowImage
 
 
+app = FastAPI()
+
+
 @app.on_event("startup")
 async def startup():
     Base.metadata.create_all(bind=engine)
-
-app = FastAPI()
 
 # Mount Static Files
 app.mount("/static", StaticFiles(directory="static"), name="static")
