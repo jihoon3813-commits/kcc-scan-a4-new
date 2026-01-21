@@ -37,33 +37,74 @@ function init() {
     canvas.addEventListener('wheel', onWheel);
 }
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxX01j0sgpIp7RYQSAjfIXcrmKAw9B_sIpdZM9UkM0yziMd5M4qAOxYa8VN-TP9RcZlHw/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxDKV1RBlLvrYnTLqytBJKdgu_WdBMmAU03na0_8GHvTRF9DhcL38tYdQA-6sIB5jMVBw/exec";
+
+// Helper to find value from object even if key name is slightly different
+function findVal(obj, keys) {
+    if (!obj) return null;
+    for (let key of keys) {
+        if (obj[key] !== undefined && obj[key] !== null && obj[key] !== "") return obj[key];
+    }
+    // Deep search (case-insensitive substring match)
+    const objKeys = Object.keys(obj);
+    for (let k of objKeys) {
+        for (let target of keys) {
+            if (k.toLowerCase().includes(target.toLowerCase()) || target.toLowerCase().includes(k.toLowerCase())) {
+                if (obj[k] !== undefined && obj[k] !== null && obj[k] !== "") return obj[k];
+            }
+        }
+    }
+    return null;
+}
+
+const NAME_KEYS = ["customer_name", "성함", "이름", "고객명", "고객"];
+const PHONE_KEYS = ["phone", "연락처", "전화번호", "휴대폰"];
+const LOC_KEYS = ["location_type", "시공위치", "위치", "장소"];
+const REF_KEYS = ["reference_type", "기준물체 종류", "기준", "기준물체"];
+const STATUS_KEYS = ["status", "상태", "진행상태"];
+const IMG_KEYS = ["image_path", "구글 드라이브 파일 링크", "사진", "이미지", "파일링크", "drive"];
+const MEMO_KEYS = ["memo", "메모", "특이사항"];
+const DATE_KEYS = ["created_at", "날짜", "등록일"];
 
 async function loadRequests() {
     const list = document.getElementById('requestList');
     try {
-        const res = await fetch(GAS_URL);
+        const timestamp = new Date().getTime();
+        const fetchUrl = `${GAS_URL}?t=${timestamp}`;
+        console.log("Fetching from GAS (Cache-busting):", fetchUrl);
+        const res = await fetch(fetchUrl);
         const data = await res.json();
+        console.log("GAS JSON Data:", data);
 
         list.innerHTML = '';
-        data.reverse().forEach(req => {
+        data.forEach((req, index) => {
+            const name = findVal(req, NAME_KEYS) || "이름없음";
+            const location = findVal(req, LOC_KEYS) || "위치없음";
+            const ref = findVal(req, REF_KEYS) || "A4";
+            const status = findVal(req, STATUS_KEYS) || "자료업로드";
+            const dateStr = findVal(req, DATE_KEYS) || new Date();
+
             const li = document.createElement('li');
             li.className = 'p-4 hover:bg-blue-50 cursor-pointer border-b transition-colors';
             li.innerHTML = `
                 <div class="flex justify-between items-start">
                     <div>
-                        <p class="font-bold text-gray-800">${req.customer_name}</p>
-                        <p class="text-xs text-gray-500">${req.location_type} | ${req.reference_type}</p>
+                        <p class="font-bold text-gray-800">${name}</p>
+                        <p class="text-xs text-gray-500">${location} | ${ref}</p>
                     </div>
-                    <span class="text-xs px-2 py-1 rounded-full ${getStatusColor(req.status)}">${req.status}</span>
+                    <span class="text-xs px-2 py-1 rounded-full ${getStatusColor(status)}">${status}</span>
                 </div>
-                <p class="text-xs text-gray-400 mt-1">${new Date(req.created_at).toLocaleDateString()}</p>
+                <p class="text-xs text-gray-400 mt-1">${new Date(dateStr).toLocaleDateString()}</p>
             `;
             li.onclick = () => loadRequestDetail(req);
             list.appendChild(li);
+
+            if (index === 0 && !selectedImageId) {
+                loadRequestDetail(req);
+            }
         });
     } catch (e) {
-        console.error(e);
+        console.error("Data Load Error:", e);
     }
 }
 
@@ -75,23 +116,29 @@ function getStatusColor(status) {
 }
 
 async function loadRequestDetail(data) {
-    currentRequestId = data.id; // Row index
+    currentRequestId = data.id;
     document.getElementById('emptyState').classList.add('hidden');
     document.getElementById('workspace').classList.remove('hidden');
 
-    // Fill Overall Request Info
-    document.getElementById('infoNamePhone').innerText = `${data.customer_name} / ${data.phone}`;
-    document.getElementById('statusSelect').value = data.status;
-    document.getElementById('memoText').value = data.memo || '';
+    const name = findVal(data, NAME_KEYS) || "-";
+    const phone = findVal(data, PHONE_KEYS) || "-";
+    const status = findVal(data, STATUS_KEYS) || "자료업로드";
+    const memo = findVal(data, MEMO_KEYS) || "";
+    const imagePath = findVal(data, IMG_KEYS) || "";
+    const loc = findVal(data, LOC_KEYS) || "-";
+    const ref = findVal(data, REF_KEYS) || "-";
 
-    // In Sheet mode, each row is one image
+    document.getElementById('infoNamePhone').innerText = `${name} / ${phone}`;
+    document.getElementById('statusSelect').value = status;
+    document.getElementById('memoText').value = memo;
+
     currentImages = [{
         id: data.id,
-        image_path: data.image_path,
-        location_type: data.location_type,
-        reference_type: data.reference_type,
-        width: data.width,
-        height: data.height
+        image_path: imagePath,
+        location_type: loc,
+        reference_type: ref,
+        width: data.width || data["가로 mm"] || 0,
+        height: data.height || data["세로 mm"] || 0
     }];
 
     renderGallery();
