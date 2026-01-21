@@ -66,6 +66,8 @@ const IMG_KEYS = ["image_path", "구글 드라이브 파일 링크", "사진", "
 const MEMO_KEYS = ["memo", "메모", "특이사항"];
 const DATE_KEYS = ["created_at", "날짜", "등록일"];
 
+let allRawData = []; // To store ungrouped data for lookup
+
 async function loadRequests() {
     const list = document.getElementById('requestList');
     try {
@@ -74,33 +76,55 @@ async function loadRequests() {
         console.log("Fetching from GAS (Cache-busting):", fetchUrl);
         const res = await fetch(fetchUrl);
         const data = await res.json();
+        allRawData = data;
         console.log("GAS JSON Data:", data);
 
         list.innerHTML = '';
-        data.forEach((req, index) => {
+
+        // Grouping Logic: Group by Name + Phone + Date(minute level)
+        const groups = {};
+        data.forEach(req => {
+            const name = findVal(req, NAME_KEYS) || "이름없음";
+            const phone = findVal(req, PHONE_KEYS) || "000";
+            const date = new Date(findVal(req, DATE_KEYS));
+            // Group by name, phone and same 5-minute window
+            const timeKey = `${date.getFullYear()}${date.getMonth()}${date.getDate()}${date.getHours()}${Math.floor(date.getMinutes() / 5)}`;
+            const groupKey = `${name}_${phone}_${timeKey}`;
+
+            if (!groups[groupKey]) {
+                groups[groupKey] = {
+                    info: req,
+                    images: []
+                };
+            }
+            groups[groupKey].images.push(req);
+        });
+
+        Object.values(groups).forEach((group, index) => {
+            const req = group.info;
             const name = findVal(req, NAME_KEYS) || "이름없음";
             const location = findVal(req, LOC_KEYS) || "위치없음";
-            const ref = findVal(req, REF_KEYS) || "A4";
             const status = findVal(req, STATUS_KEYS) || "자료업로드";
             const dateStr = findVal(req, DATE_KEYS) || new Date();
+            const imgCount = group.images.length;
 
             const li = document.createElement('li');
             li.className = 'p-4 hover:bg-blue-50 cursor-pointer border-b transition-colors';
             li.innerHTML = `
                 <div class="flex justify-between items-start">
                     <div>
-                        <p class="font-bold text-gray-800">${name}</p>
-                        <p class="text-xs text-gray-500">${location} | ${ref}</p>
+                        <p class="font-bold text-gray-800">${name} <span class="text-blue-500 text-xs">[${imgCount}]</span></p>
+                        <p class="text-xs text-gray-500">${location} 외</p>
                     </div>
                     <span class="text-xs px-2 py-1 rounded-full ${getStatusColor(status)}">${status}</span>
                 </div>
-                <p class="text-xs text-gray-400 mt-1">${new Date(dateStr).toLocaleDateString()}</p>
+                <p class="text-xs text-gray-400 mt-1">${new Date(dateStr).toLocaleString()}</p>
             `;
-            li.onclick = () => loadRequestDetail(req);
+            li.onclick = () => loadRequestDetail(group);
             list.appendChild(li);
 
             if (index === 0 && !selectedImageId) {
-                loadRequestDetail(req);
+                loadRequestDetail(group);
             }
         });
     } catch (e) {
@@ -115,34 +139,56 @@ function getStatusColor(status) {
     return 'bg-gray-100';
 }
 
-async function loadRequestDetail(data) {
-    currentRequestId = data.id;
+async function loadRequestDetail(group) {
+    const mainData = group.info;
+    currentRequestId = mainData.id;
     document.getElementById('emptyState').classList.add('hidden');
     document.getElementById('workspace').classList.remove('hidden');
 
-    const name = findVal(data, NAME_KEYS) || "-";
-    const phone = findVal(data, PHONE_KEYS) || "-";
-    const status = findVal(data, STATUS_KEYS) || "자료업로드";
-    const memo = findVal(data, MEMO_KEYS) || "";
-    const imagePath = findVal(data, IMG_KEYS) || "";
-    const loc = findVal(data, LOC_KEYS) || "-";
-    const ref = findVal(data, REF_KEYS) || "-";
+    const name = findVal(mainData, NAME_KEYS) || "-";
+    const phone = findVal(mainData, PHONE_KEYS) || "-";
+    const status = findVal(mainData, STATUS_KEYS) || "자료업로드";
+    const memo = findVal(mainData, MEMO_KEYS) || "";
 
     document.getElementById('infoNamePhone').innerText = `${name} / ${phone}`;
     document.getElementById('statusSelect').value = status;
     document.getElementById('memoText').value = memo;
 
-    currentImages = [{
-        id: data.id,
-        image_path: imagePath,
-        location_type: loc,
-        reference_type: ref,
-        width: data.width || data["가로 mm"] || 0,
-        height: data.height || data["세로 mm"] || 0
-    }];
+    // Load multiple images from the group
+    currentImages = group.images.map(img => ({
+        id: img.id,
+        image_path: findVal(img, IMG_KEYS),
+        location_type: findVal(img, LOC_KEYS),
+        reference_type: findVal(img, REF_KEYS),
+        width: img.width || img["가로 mm"] || 0,
+        height: img.height || img["세로 mm"] || 0
+    }));
 
     renderGallery();
-    selectImage(data.id);
+    if (currentImages.length > 0) {
+        selectImage(currentImages[0].id);
+    }
+}
+
+// --- Smart Zoom Features ---
+function resetZoom() {
+    currentScale = 1.0;
+    offset.x = 0;
+    offset.y = 0;
+    draw();
+}
+
+function zoomToPoint(targetX, targetY) {
+    // Zoom in to 4.0x scale around the clicked point
+    const targetScale = 4.0;
+
+    // Calculate new position to center the target point
+    // targetX/Y are in image-space pixels
+    offset.x = (canvas.width / 2) - (targetX * targetScale);
+    offset.y = (canvas.height / 2) - (targetY * targetScale);
+    currentScale = targetScale;
+
+    draw();
 }
 
 function renderGallery() {
@@ -295,11 +341,21 @@ function getMousePos(e) {
 }
 
 function onMouseDown(e) {
+    const rect = canvas.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
     const pos = getMousePos(e);
+
     isDragging = true;
     startPos = pos;
 
     if (mode === 'ref') {
+        // If not zoomed in, zoom in first to the click area
+        if (currentScale < 2.0) {
+            zoomToPoint(pos.x, pos.y);
+            isDragging = false; // Don't start drawing immediately on zoom click
+            return;
+        }
         refBox = { x: pos.x, y: pos.y, w: 0, h: 0 };
     } else if (mode === 'measure') {
         measureLine = { x1: pos.x, y1: pos.y, x2: pos.x, y2: pos.y };
