@@ -246,28 +246,19 @@
 
             const CONVEX_URL = "https://benevolent-kudu-521.convex.cloud";
 
-            // Import Convex Client with Retry
-            let convexClient;
-            async function initConvex(retryCount = 0) {
+            // Improved Convex Loader
+            let convexClient = null;
+            async function initConvex() {
                 const btn = document.getElementById('submitBtn');
-                const MAX_RETRIES = 3;
-
                 try {
-                    console.log(`Connecting to Convex... (Attempt ${retryCount + 1})`);
-                    const { ConvexClient } = await import("https://unpkg.com/convex@1.11.0/dist/browser/index.js");
-                    convexClient = new ConvexClient(CONVEX_URL);
-                    console.log("Convex Client Initialized Successfully");
-
-                    // Enable button if images exist
+                    console.log("Convex 연결 시도 중...");
+                    const module = await import("https://cdn.jsdelivr.net/npm/convex@1.11.0/dist/browser/index.js");
+                    convexClient = new module.ConvexClient(CONVEX_URL);
+                    console.log("Convex 연결 성공");
                     updateImageList();
                 } catch (err) {
-                    console.error("Failed to load Convex Client:", err);
-                    if (retryCount < MAX_RETRIES) {
-                        setTimeout(() => initConvex(retryCount + 1), 2000);
-                    } else {
-                        btn.innerText = "초기화 실패 (새로고침 필요)";
-                        btn.classList.add('bg-red-500');
-                    }
+                    console.error("Convex 로딩 실패:", err);
+                    btn.innerText = "연결 지연 중... (F5 추천)";
                 }
             }
             initConvex();
