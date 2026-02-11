@@ -140,7 +140,8 @@
                         class="w-full py-3 bg-blue-600 text-white rounded-lg font-bold text-base shadow-sm hover:bg-blue-700 active:scale-95 transition-all">
                         📸 사진 등록 (카메라/앨범)
                     </button>
-                    <input id="fileInput" type="file" accept="image/*" class="sr-only" onchange="addPhotoToQueue(this)">
+                    <input id="fileInput" type="file" accept="image/*" class="sr-only"
+                        onchange="window.addPhotoToQueue(this)">
                 </div>
             </div>
 
@@ -161,22 +162,26 @@
             <button onclick="location.reload()" class="mt-4 text-blue-600 hover:text-blue-500 font-medium">추가
                 접수하기</button>
         </div>
-        <script>
-            let imagesQueue = []; // Array of {file, loc, ref}
 
-            function selectGlobalRef(type) {
-                document.getElementById('globalRef').value = type;
+        <script type="module">
+            // Import Convex Client at the top for better reliability
+            import { ConvexClient } from "https://cdn.jsdelivr.net/npm/convex@1.11.0/dist/browser/index.js";
 
-                // Toggle Buttons
-                document.querySelectorAll('.ref-btn').forEach(b => {
-                    b.classList.remove('border-blue-500', 'ring-2', 'ring-blue-200');
-                    b.classList.add('border-gray-100');
-                });
-                const activeBtn = type === 'A4' ? document.getElementById('refBtn_A4') : document.getElementById('refBtn_CARD');
-                activeBtn.classList.add('border-blue-500', 'ring-2', 'ring-blue-200');
-                activeBtn.classList.remove('border-gray-100');
+            const CONVEX_URL = "https://benevolent-kudu-521.convex.cloud";
+            let convexClient = null;
+            let imagesQueue = []; // Array of {file, blob, loc, ref}
+
+            // Initialize Convex
+            try {
+                convexClient = new ConvexClient(CONVEX_URL);
+                console.log("Convex 연결 성공");
+            } catch (err) {
+                console.error("Convex 초기화 실패:", err);
+                const btn = document.getElementById('submitBtn');
+                if (btn) btn.innerText = "서버 연결 오류 (F5 추천)";
             }
 
+            // UI helper for location select
             document.getElementById('curLocation').addEventListener('change', function () {
                 const etc = document.getElementById('curLocationEtc');
                 if (this.value === '직접입력') {
@@ -187,25 +192,53 @@
                 }
             });
 
-            function addPhotoToQueue(input) {
+            // Make functions global for inline onclick handlers
+            window.selectGlobalRef = function (type) {
+                document.getElementById('globalRef').value = type;
+                document.querySelectorAll('.ref-btn').forEach(b => {
+                    b.classList.remove('border-blue-500', 'ring-2', 'ring-blue-200');
+                    b.classList.add('border-gray-100');
+                });
+                const activeBtn = type === 'A4' ? document.getElementById('refBtn_A4') : document.getElementById('refBtn_CARD');
+                activeBtn.classList.add('border-blue-500', 'ring-2', 'ring-blue-200');
+                activeBtn.classList.remove('border-gray-100');
+            };
+
+            window.addPhotoToQueue = async function (input) {
                 if (!input.files || !input.files[0]) return;
 
                 const file = input.files[0];
+                const btn = document.getElementById('submitBtn');
+                const originalText = btn.innerText;
+
+                btn.disabled = true;
+                btn.innerText = "사진 처리 중...";
+
                 let loc = document.getElementById('curLocation').value;
                 if (loc === '직접입력') loc = document.getElementById('curLocationEtc').value || '기타';
                 const ref = document.getElementById('globalRef').value;
 
-                imagesQueue.push({ file, loc, ref });
-                updateImageList();
-                input.value = ""; // Clear for next capture
-            }
+                try {
+                    // Compress image before adding to queue
+                    const compressedBlob = await compressImage(file);
+                    imagesQueue.push({ file, blob: compressedBlob, loc, ref });
+                    window.updateImageList();
+                } catch (err) {
+                    console.error("사진 처리 실패:", err);
+                    alert("사진 처리 중 오류가 발생했습니다.");
+                } finally {
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                    input.value = "";
+                }
+            };
 
-            function removePhoto(index) {
+            window.removePhoto = function (index) {
                 imagesQueue.splice(index, 1);
-                updateImageList();
-            }
+                window.updateImageList();
+            };
 
-            function updateImageList() {
+            window.updateImageList = function () {
                 const list = document.getElementById('imageList');
                 const btn = document.getElementById('submitBtn');
 
@@ -226,49 +259,67 @@
                 list.innerHTML = "";
                 imagesQueue.forEach((img, idx) => {
                     const row = document.createElement('div');
-                    row.className = "flex items-center bg-white border p-2 rounded-lg shadow-sm";
-
-                    const url = URL.createObjectURL(img.file);
-
+                    row.className = "flex items-center bg-white border p-2 rounded-lg shadow-sm mb-2";
+                    const url = URL.createObjectURL(img.blob);
                     row.innerHTML = `
                         <img src="${url}" class="w-12 h-12 object-cover rounded mr-3">
                         <div class="flex-1">
                             <p class="text-sm font-bold text-gray-800">${img.loc}</p>
                             <p class="text-[10px] text-gray-500">${img.ref === 'A4' ? 'A4 용지' : '신용카드'}</p>
                         </div>
-                        <button type="button" onclick="removePhoto(${idx})" class="text-red-500 p-2">
+                        <button type="button" onclick="window.removePhoto(${idx})" class="text-red-500 p-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
                     `;
                     list.appendChild(row);
                 });
+            };
+
+            // Image compression utility
+            async function compressImage(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.src = e.target.result;
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            let width = img.width;
+                            let height = img.height;
+                            const MAX_SIZE = 1600;
+
+                            if (width > height) {
+                                if (width > MAX_SIZE) {
+                                    height *= MAX_SIZE / width;
+                                    width = MAX_SIZE;
+                                }
+                            } else {
+                                if (height > MAX_SIZE) {
+                                    width *= MAX_SIZE / height;
+                                    height = MAX_SIZE;
+                                }
+                            }
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+                            canvas.toBlob((blob) => {
+                                resolve(blob);
+                            }, 'image/jpeg', 0.8);
+                        };
+                    };
+                    reader.onerror = reject;
+                });
             }
 
-            const CONVEX_URL = "https://benevolent-kudu-521.convex.cloud";
-
-            // Improved Convex Loader
-            let convexClient = null;
-            async function initConvex() {
-                const btn = document.getElementById('submitBtn');
-                try {
-                    console.log("Convex 연결 시도 중...");
-                    const module = await import("https://cdn.jsdelivr.net/npm/convex@1.11.0/dist/browser/index.js");
-                    convexClient = new module.ConvexClient(CONVEX_URL);
-                    console.log("Convex 연결 성공");
-                    updateImageList();
-                } catch (err) {
-                    console.error("Convex 로딩 실패:", err);
-                    btn.innerText = "연결 지연 중... (F5 추천)";
-                }
-            }
-            initConvex();
-
+            // Form submission
             document.getElementById('uploadForm').addEventListener('submit', async function (e) {
                 e.preventDefault();
                 if (imagesQueue.length === 0) return;
 
                 if (!convexClient) {
-                    alert("서버 연결에 문제가 발생했습니다. 페이지를 새로고침한 후 다시 시도해주세요.");
+                    alert("서버 연결 중입니다. 잠시만 기다려주세요.");
                     return;
                 }
 
@@ -289,21 +340,16 @@
                         const img = imagesQueue[i];
                         btn.innerHTML = `이미지 업로드 중... (${i + 1}/${imagesQueue.length})`;
 
-                        // Get Upload URL
                         const postUrl = await convexClient.mutation("images:generateUploadUrl");
-
-                        // Upload to Convex Storage
                         const result = await fetch(postUrl, {
                             method: "POST",
-                            headers: { "Content-Type": img.file.type },
-                            body: img.file,
+                            headers: { "Content-Type": "image/jpeg" },
+                            body: img.blob,
                         });
 
                         if (!result.ok) throw new Error("Image upload failed");
-
                         const { storageId } = await result.json();
 
-                        // Link to Request
                         await convexClient.mutation("images:saveImage", {
                             requestId,
                             storageId,
@@ -317,48 +363,11 @@
 
                 } catch (error) {
                     console.error('Submission Error:', error);
-                    alert('전송 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+                    alert('전송 중 오류가 발생했습니다: ' + error.message);
                     btn.disabled = false;
                     btn.innerHTML = originalText;
                 }
             });
-
-            function compressAndGetBase64(file) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.readAsDataURL(file);
-                    reader.onload = (e) => {
-                        const img = new Image();
-                        img.src = e.target.result;
-                        img.onload = () => {
-                            const canvas = document.createElement('canvas');
-                            let width = img.width;
-                            let height = img.height;
-                            const MAX_SIZE = 1200;
-
-                            if (width > height) {
-                                if (width > MAX_SIZE) {
-                                    height *= MAX_SIZE / width;
-                                    width = MAX_SIZE;
-                                }
-                            } else {
-                                if (height > MAX_SIZE) {
-                                    width *= MAX_SIZE / height;
-                                    height = MAX_SIZE;
-                                }
-                            }
-
-                            canvas.width = width;
-                            canvas.height = height;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0, width, height);
-                            // Compress to JPEG with 0.6 quality (Faster upload, still good enough for analysis)
-                            resolve(canvas.toDataURL('image/jpeg', 0.6));
-                        };
-                    };
-                    reader.onerror = error => reject(error);
-                });
-            }
         </script>
     </div>
 </body>
