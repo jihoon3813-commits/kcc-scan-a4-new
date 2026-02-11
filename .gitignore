@@ -7,3 +7,5 @@ uploads/*
 .vscode/
 .vercel/
 .vercel
+
+.env.local
