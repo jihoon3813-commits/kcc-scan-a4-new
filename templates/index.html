@@ -136,9 +136,9 @@
 
     <!-- UI Logic Script (Non-Module for Immediate Access) -->
     <script>
-        let imagesQueue = [];
+        // Make imagesQueue global so the module script can see it
+        window.imagesQueue = [];
 
-        // Use window to ensure availability across script boundaries
         window.selectGlobalRef = function (type) {
             document.getElementById('globalRef').value = type;
             document.querySelectorAll('.ref-btn').forEach(b => {
@@ -170,20 +170,19 @@
                 if (loc === '직접입력') loc = document.getElementById('curLocationEtc').value || '기타';
                 const ref = document.getElementById('globalRef').value;
 
-                // Simple check for image files
                 if (!file.type.startsWith('image/')) {
                     alert("이미지 파일만 선택 가능합니다.");
                     return;
                 }
 
                 const blob = await compressImage(file);
-                imagesQueue.push({ blob, loc, ref });
+                window.imagesQueue.push({ blob, loc, ref });
                 renderQueue();
             } catch (e) {
                 console.error(e);
-                alert("사진 처리 중 오규가 발생했습니다.");
+                alert("사진 처리 중 오류가 발생했습니다: " + e.message);
             } finally {
-                btn.disabled = imagesQueue.length === 0;
+                btn.disabled = window.imagesQueue.length === 0;
                 btn.innerText = originalText;
                 input.value = "";
                 updateSubmitButton();
@@ -191,19 +190,19 @@
         };
 
         window.removePhoto = function (idx) {
-            imagesQueue.splice(idx, 1);
+            window.imagesQueue.splice(idx, 1);
             renderQueue();
             updateSubmitButton();
         };
 
         function renderQueue() {
             const list = document.getElementById('imageList');
-            if (imagesQueue.length === 0) {
+            if (window.imagesQueue.length === 0) {
                 list.innerHTML = '<p class="text-xs text-center text-gray-400 py-4 bg-gray-50 border border-dashed rounded-lg">추가된 사진이 없습니다.</p>';
                 return;
             }
             list.innerHTML = "";
-            imagesQueue.forEach((img, idx) => {
+            window.imagesQueue.forEach((img, idx) => {
                 const div = document.createElement('div');
                 div.className = "flex items-center bg-white border p-2 rounded-lg shadow-sm";
                 const url = URL.createObjectURL(img.blob);
@@ -217,13 +216,13 @@
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                 `;
-                list.appendChild(row = div);
+                list.appendChild(div);
             });
         }
 
         function updateSubmitButton() {
             const btn = document.getElementById('submitBtn');
-            const count = imagesQueue.length;
+            const count = window.imagesQueue.length;
             if (count > 0) {
                 btn.disabled = false;
                 btn.classList.remove('bg-gray-400', 'cursor-not-allowed');
@@ -270,13 +269,18 @@
     <!-- Backend Logic Script (Module) -->
     <script type="module">
         import { ConvexClient } from "https://cdn.jsdelivr.net/npm/convex@1.11.0/dist/browser/index.js";
-        const CONVEX_URL = "https://benevolent-kudu-521.convex.cloud";
+        const CONVEX_URL = "https://adventurous-barracuda-87.convex.cloud";
         const client = new ConvexClient(CONVEX_URL);
 
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('submitBtn');
             const originalText = btn.innerText;
+
+            if (window.imagesQueue.length === 0) {
+                alert("추가된 사진이 없습니다.");
+                return;
+            }
 
             try {
                 btn.disabled = true;
@@ -285,13 +289,16 @@
                 const name = e.target.name.value;
                 const phone = e.target.phone.value;
 
+                console.log("Submit start:", { name, phone });
+
                 // 1. Submit Request
                 const requestId = await client.mutation("requests:submit", { name, phone });
+                console.log("Request created:", requestId);
 
                 // 2. Upload Images
-                for (let i = 0; i < imagesQueue.length; i++) {
-                    const img = imagesQueue[i];
-                    btn.innerText = `업로드 중 (${i + 1}/${imagesQueue.length})`;
+                for (let i = 0; i < window.imagesQueue.length; i++) {
+                    const img = window.imagesQueue[i];
+                    btn.innerText = `업로드 중 (${i + 1}/${window.imagesQueue.length})`;
 
                     const uploadUrl = await client.mutation("images:generateUploadUrl");
                     const response = await fetch(uploadUrl, {
@@ -299,19 +306,24 @@
                         headers: { "Content-Type": "image/jpeg" },
                         body: img.blob
                     });
+
+                    if (!response.ok) throw new Error(`${i + 1}번째 이미지 업로드 실패: ${response.statusText}`);
+
                     const { storageId } = await response.json();
+                    console.log("Image uploaded to storage:", storageId);
 
                     await client.mutation("images:saveImage", {
                         requestId, storageId, location: img.loc, refType: img.ref
                     });
                 }
 
+                alert("접수가 정상적으로 완료되었습니다!");
                 document.getElementById('uploadForm').classList.add('hidden');
                 document.getElementById('successMessage').classList.remove('hidden');
 
             } catch (err) {
-                console.error(err);
-                alert("전송 실패: " + err.message);
+                console.error("Submission Error:", err);
+                alert("접수 실패: " + err.message + "\n\n개발자 도구(F12) 콘솔에서 상세 내용을 확인해주세요.");
                 btn.disabled = false;
                 btn.innerText = originalText;
             }

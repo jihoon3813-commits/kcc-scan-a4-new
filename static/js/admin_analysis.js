@@ -34,7 +34,7 @@ function getThumbnailUrl(url_or_id) {
 }
 
 // Helper to convert Google Drive Link to a Proxy Link through our server
-const CONVEX_URL = "https://benevolent-kudu-521.convex.cloud"; // Production Convex URL
+const CONVEX_URL = "https://adventurous-barracuda-87.convex.cloud"; // Development Convex URL
 let convexClient;
 
 async function initConvex() {
