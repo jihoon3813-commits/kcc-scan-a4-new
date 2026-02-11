@@ -246,15 +246,28 @@
 
             const CONVEX_URL = "https://benevolent-kudu-521.convex.cloud";
 
-            // Import Convex Client
+            // Import Convex Client with Retry
             let convexClient;
-            async function initConvex() {
+            async function initConvex(retryCount = 0) {
+                const btn = document.getElementById('submitBtn');
+                const MAX_RETRIES = 3;
+
                 try {
+                    console.log(`Connecting to Convex... (Attempt ${retryCount + 1})`);
                     const { ConvexClient } = await import("https://unpkg.com/convex@1.11.0/dist/browser/index.js");
                     convexClient = new ConvexClient(CONVEX_URL);
-                    console.log("Convex Client Initialized");
+                    console.log("Convex Client Initialized Successfully");
+
+                    // Enable button if images exist
+                    updateImageList();
                 } catch (err) {
-                    console.error("Failed to load Convex:", err);
+                    console.error("Failed to load Convex Client:", err);
+                    if (retryCount < MAX_RETRIES) {
+                        setTimeout(() => initConvex(retryCount + 1), 2000);
+                    } else {
+                        btn.innerText = "초기화 실패 (새로고침 필요)";
+                        btn.classList.add('bg-red-500');
+                    }
                 }
             }
             initConvex();
@@ -262,15 +275,16 @@
             document.getElementById('uploadForm').addEventListener('submit', async function (e) {
                 e.preventDefault();
                 if (imagesQueue.length === 0) return;
+
                 if (!convexClient) {
-                    alert("시스템 초기화 중입니다. 잠시 후 다시 시도해주세요.");
+                    alert("서버 연결에 문제가 발생했습니다. 페이지를 새로고침한 후 다시 시도해주세요.");
                     return;
                 }
 
                 const btn = document.getElementById('submitBtn');
                 const originalText = btn.innerHTML;
                 btn.disabled = true;
-                btn.innerHTML = `전송 중... (0/${imagesQueue.length})`;
+                btn.innerHTML = `<span class="animate-pulse">데이터 전송 중... (0/${imagesQueue.length})</span>`;
 
                 const name = this.elements['name'].value;
                 const phone = document.getElementById('phoneInput').value;
@@ -282,7 +296,7 @@
                     // 2. Upload Images
                     for (let i = 0; i < imagesQueue.length; i++) {
                         const img = imagesQueue[i];
-                        btn.innerHTML = `이미지 처리 중... (${i + 1}/${imagesQueue.length})`;
+                        btn.innerHTML = `이미지 업로드 중... (${i + 1}/${imagesQueue.length})`;
 
                         // Get Upload URL
                         const postUrl = await convexClient.mutation("images:generateUploadUrl");
@@ -293,6 +307,9 @@
                             headers: { "Content-Type": img.file.type },
                             body: img.file,
                         });
+
+                        if (!result.ok) throw new Error("Image upload failed");
+
                         const { storageId } = await result.json();
 
                         // Link to Request
@@ -302,15 +319,13 @@
                             location: img.loc,
                             refType: img.ref
                         });
-
-                        btn.innerHTML = `전송 중... (${i + 1}/${imagesQueue.length})`;
                     }
 
                     document.getElementById('uploadForm').classList.add('hidden');
                     document.getElementById('successMessage').classList.remove('hidden');
 
                 } catch (error) {
-                    console.error('Error:', error);
+                    console.error('Submission Error:', error);
                     alert('전송 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
                     btn.disabled = false;
                     btn.innerHTML = originalText;
