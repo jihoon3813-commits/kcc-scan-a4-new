@@ -159,31 +159,53 @@
         window.handleAddPhoto = async function (input) {
             if (!input.files || !input.files[0]) return;
             const file = input.files[0];
-            const btn = document.getElementById('submitBtn');
-            const originalText = btn.innerText;
 
-            btn.disabled = true;
-            btn.innerText = "처리 중...";
+            // UI References
+            const addBtn = document.querySelector('button[onclick*="fileInput"]');
+            const originalAddBtnText = addBtn.innerHTML;
+
+            // 1. Show Loading State
+            addBtn.disabled = true;
+            addBtn.innerHTML = "⏳ 사진 처리 중... (잠시만 기다려주세요)";
+            addBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
             try {
                 let loc = document.getElementById('curLocation').value;
                 if (loc === '직접입력') loc = document.getElementById('curLocationEtc').value || '기타';
                 const ref = document.getElementById('globalRef').value;
 
+                console.log("Start processing:", file.name, file.type);
+
+                // Validation
                 if (!file.type.startsWith('image/')) {
-                    alert("이미지 파일만 선택 가능합니다.");
-                    return;
+                    throw new Error("이미지 파일(JPG, PNG 등)만 선택할 수 있습니다.");
                 }
 
+                // Compress
                 const blob = await compressImage(file);
+
+                // Add to Queue
                 window.imagesQueue.push({ blob, loc, ref });
                 renderQueue();
+
+                // 2. Success Alert
+                // alert("사진이 정상적으로 등록되었습니다."); // Optional: Remove if too annoying, but user asked for it.
+                // Instead of alert, let's just create a toast or simple feedback via console/UI, 
+                // BUT the user explicitly asked: "등록되면 완료라고 띄우고" -> So I will use alert or a visible text.
+                // Given the flow, alert might be intrusive but it's exactly what was asked.
+                // Let's use a small timeout to ensure UI renders first.
+                setTimeout(() => alert("사진 등록이 완료되었습니다."), 100);
+
             } catch (e) {
-                console.error(e);
-                alert("사진 처리 중 오류가 발생했습니다: " + e.message);
+                console.error("Photo error:", e);
+                // 3. Failure Alert with Reason
+                alert(`사진 등록 실패!\n이유: ${e.message}`);
             } finally {
-                btn.disabled = window.imagesQueue.length === 0;
-                btn.innerText = originalText;
+                // 4. Restore UI
+                addBtn.disabled = false;
+                addBtn.innerHTML = originalAddBtnText;
+                addBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
                 input.value = "";
                 updateSubmitButton();
             }
@@ -237,22 +259,43 @@
         }
 
         async function compressImage(file) {
-            return new Promise((resolve) => {
+            return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const img = new Image();
                     img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const MAX = 1600;
-                        let w = img.width, h = img.height;
-                        if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
-                        else { if (h > MAX) { w *= MAX / h; h = MAX; } }
-                        canvas.width = w; canvas.height = h;
-                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                        canvas.toBlob(resolve, 'image/jpeg', 0.8);
+                        try {
+                            const canvas = document.createElement('canvas');
+                            const MAX = 1600;
+                            let w = img.width, h = img.height;
+
+                            if (w === 0 || h === 0) {
+                                reject(new Error("이미지 크기를 읽을 수 없습니다."));
+                                return;
+                            }
+
+                            if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
+                            else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+
+                            canvas.width = w; canvas.height = h;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, w, h);
+
+                            canvas.toBlob((blob) => {
+                                if (!blob) {
+                                    reject(new Error("이미지 압축에 실패했습니다."));
+                                    return;
+                                }
+                                resolve(blob);
+                            }, 'image/jpeg', 0.8);
+                        } catch (err) {
+                            reject(new Error("이미지 변환 중 오류: " + err.message));
+                        }
                     };
+                    img.onerror = () => reject(new Error("이미지 파일을 읽을 수 없습니다. 손상된 파일일 수 있습니다."));
                     img.src = e.target.result;
                 };
+                reader.onerror = () => reject(new Error("파일 읽기 실패."));
                 reader.readAsDataURL(file);
             });
         }
