@@ -56,6 +56,22 @@
             color: #1d4ed8;
             box-shadow: 0 0 0 4px #bfdbfe;
         }
+
+        .photo-row {
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 
@@ -122,30 +138,31 @@
             </div>
 
             <!-- 5. Submit -->
-            <button type="button" id="subBtn" onclick="requestSubmit()"
-                class="w-full py-6 bg-gray-950 text-white rounded-3xl font-black text-xl shadow-2xl hover:bg-black active:scale-[0.98] transition-all">
-                최종 접수 완료하기
-            </button>
-            <p id="statusMsg" class="text-center text-xs font-bold text-gray-400 hidden italic"></p>
+            <div class="pt-2">
+                <button type="button" id="subBtn" onclick="window.requestSubmit()"
+                    class="w-full py-6 bg-gray-950 text-white rounded-3xl font-black text-xl shadow-2xl hover:bg-black active:scale-[0.98] transition-all">
+                    최종 접수 완료하기
+                </button>
+                <p id="statusMsg" class="mt-4 text-center text-xs font-bold text-gray-400 italic hidden"></p>
+            </div>
         </div>
 
-        <!-- Success -->
-        <div id="ui-done" class="hidden p-20 text-center">
+        <!-- Success Screen -->
+        <div id="ui-done" class="hidden p-20 text-center flex flex-col items-center">
             <div class="text-8xl mb-6">🎯</div>
-            <h2 class="text-3xl font-black text-gray-950 mb-3 uppercase tracking-tighter">접수 완료!</h2>
+            <h2 class="text-3xl font-black text-gray-950 mb-3 uppercase tracking-tighter leading-tight">접수 완료!</h2>
             <p class="text-gray-500 mb-10 font-bold leading-relaxed">성공적으로 전송되었습니다.<br>금방 연락드릴게요!</p>
-            <button onclick="location.reload()" class="w-full py-4 bg-gray-100 rounded-2xl font-bold text-gray-600">추가
-                등록하기</button>
+            <button onclick="location.reload()" class="px-8 py-4 bg-gray-100 rounded-2xl font-bold text-gray-600">추가
+                접수하기</button>
         </div>
     </div>
 
+    <!-- UI Logic (Pure & Instant) -->
     <script>
-        // 전역 상태
         var PHOTOS = [];
         var CURRENT_REF = 'A4';
-        window.CONVEX_CLIENT = null;
 
-        // 1. 휴대폰 자동 하이픈
+        // 1. 휴대폰 자동 하이픈 (입력 즉시 작동)
         document.getElementById('phoneInp').addEventListener('input', function (e) {
             var v = e.target.value.replace(/\D/g, '');
             if (v.length <= 3) e.target.value = v;
@@ -164,7 +181,7 @@
         async function imgReady(inp) {
             var f = inp.files[0]; if (!f) return;
             var b = document.getElementById('camBtn');
-            var old = b.innerText; b.innerText = "⏳ 사진 압축 중..."; b.disabled = true;
+            var old = b.innerText; b.innerText = "⏳ 처리 중..."; b.disabled = true;
             try {
                 var blob = await new Promise(function (res) {
                     var r = new FileReader();
@@ -194,7 +211,7 @@
             list.innerHTML = "";
             PHOTOS.forEach(function (it, i) {
                 var d = document.createElement('div');
-                d.className = "flex items-center justify-between bg-white border border-gray-100 p-3 rounded-2xl shadow-sm";
+                d.className = "photo-row flex items-center justify-between bg-white border border-gray-100 p-3 rounded-2xl shadow-sm";
                 var u = URL.createObjectURL(it.blob);
                 d.innerHTML = '<div class="flex items-center gap-4"><img src="' + u + '" class="w-16 h-16 object-cover rounded-xl border-2 border-slate-50 shadow-inner"><div><p class="text-sm font-black text-gray-800">' + it.loc + '</p><p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest">' + it.ref + '</p></div></div><button onclick="delImg(' + i + ')" class="w-10 h-10 text-gray-300 hover:text-red-500 font-bold">✕</button>';
                 list.appendChild(d);
@@ -203,43 +220,56 @@
 
         function delImg(i) { PHOTOS.splice(i, 1); if (PHOTOS.length === 0) location.reload(); else updatePhotos(); }
 
-        // --- Convex 연결 및 전송 로직 ---
+        window.onload = function () {
+            var p = new URLSearchParams(window.location.search);
+            if (p.get('name')) document.getElementById('nameInp').value = p.get('name');
+            if (p.get('phone')) {
+                document.getElementById('phoneInp').value = p.get('phone');
+                document.getElementById('phoneInp').dispatchEvent(new Event('input'));
+            }
+            if (window.location.search) window.history.replaceState({}, '', window.location.pathname);
+        };
+
+        // 초기 접수 함수 (백엔드 로드 전용)
+        window.requestSubmit = function () {
+            alert("서버 연결을 확인하고 있습니다. 잠시만 기다려 주세요.");
+        };
+    </script>
+
+    <!-- Backend Logic (Unified & Reliable) -->
+    <script type="module">
+        import { ConvexClient } from "https://cdn.jsdelivr.net/npm/convex@1.11.0/dist/browser/index.js";
+
+        const client = new ConvexClient("https://adventurous-barracuda-87.convex.cloud");
+        const statusMsg = document.getElementById('statusMsg');
+
+        // 백엔드 연결 성공 시
         window.requestSubmit = async function () {
             var n = document.getElementById('nameInp').value.trim();
             var p = document.getElementById('phoneInp').value.trim();
             var b = document.getElementById('subBtn');
-            var msg = document.getElementById('statusMsg');
 
             if (!n || !p) return alert("성함과 연락처를 입력해 주세요.");
-            if (PHOTOS.length === 0) return alert("사진을 1장 이상 등록해 주세요.");
-
-            // 서버 연결 확인
-            if (!window.CONVEX_CLIENT) {
-                msg.innerText = "🔄 서버 연결 시도 중... 잠시만 기다려 주세요.";
-                msg.classList.remove('hidden');
-                setTimeout(requestSubmit, 1000); // 1초 후 재시도
-                return;
-            }
+            if (PHOTOS.length === 0) return alert("사진을 최소 1장 이상 등록해 주세요.");
 
             b.disabled = true;
             b.innerHTML = '<span class="pulse font-black text-blue-300">📊 서버로 전송 중...</span>';
-            msg.classList.add('hidden');
 
             try {
                 // 1. 접수 생성
-                var reqId = await window.CONVEX_CLIENT.mutation("requests:submit", { name: n, phone: p });
+                var reqId = await client.mutation("requests:submit", { name: n, phone: p });
 
                 // 2. 사진 업로드
                 for (var i = 0; i < PHOTOS.length; i++) {
                     var it = PHOTOS[i];
                     b.innerText = "업로드 중 (" + (i + 1) + "/" + PHOTOS.length + ")";
 
-                    var url = await window.CONVEX_CLIENT.mutation("images:generateUploadUrl");
+                    var url = await client.mutation("images:generateUploadUrl");
                     var res = await fetch(url, { method: "POST", body: it.blob });
                     if (!res.ok) throw new Error("업로드 실패");
 
                     var data = await res.json();
-                    await window.CONVEX_CLIENT.mutation("images:saveImage", {
+                    await client.mutation("images:saveImage", {
                         requestId: reqId,
                         storageId: data.storageId,
                         location: it.loc,
@@ -252,37 +282,14 @@
                 alert("접수가 정상적으로 완료되었습니다!");
             } catch (err) {
                 console.error(err);
-                alert("전송 오류: " + err.message + "\n다시 한번 시도해 주세요.");
+                alert("전송 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
                 b.disabled = false;
                 b.innerText = "최종 접수 완료하기";
             }
         };
 
-        // 초기 URL 파라미터 처리
-        window.onload = function () {
-            var p = new URLSearchParams(window.location.search);
-            if (p.get('name')) document.getElementById('nameInp').value = p.get('name');
-            if (p.get('phone')) {
-                document.getElementById('phoneInp').value = p.get('phone');
-                document.getElementById('phoneInp').dispatchEvent(new Event('input'));
-            }
-            if (window.location.search) window.history.replaceState({}, '', window.location.pathname);
-
-            // Convex 클라이언트 초기화 (강력한 UNPKG 방식)
-            initConvex();
-        };
-
-        async function initConvex() {
-            try {
-                const { ConvexClient } = await import("https://unpkg.com/convex@1.11.0/dist/browser/index.js");
-                window.CONVEX_CLIENT = new ConvexClient("https://adventurous-barracuda-87.convex.cloud");
-                console.log("Convex Ready.");
-            } catch (err) {
-                console.error("Convex Load Fail:", err);
-                document.getElementById('statusMsg').innerText = "❌ 서버 연결 실패. 새로고침해 주세요.";
-                document.getElementById('statusMsg').classList.remove('hidden');
-            }
-        }
+        // 연결 상태 표시 제거 (사용자 불안 해소)
+        statusMsg.classList.add('hidden');
     </script>
 </body>
 
