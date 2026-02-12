@@ -141,8 +141,6 @@ async function loadRequests() {
 
 async function loadRequestDetail(requestId) {
     currentRequestId = requestId;
-    document.getElementById('emptyState').classList.add('hidden');
-    document.getElementById('workspace').classList.remove('hidden');
 
     try {
         let data;
@@ -155,13 +153,20 @@ async function loadRequestDetail(requestId) {
 
         if (!data) return;
 
+        // Show workspace only when data is ready
+        document.getElementById('emptyState').classList.add('hidden');
+        const ws = document.getElementById('workspace');
+        ws.classList.remove('hidden');
+        setTimeout(() => ws.classList.remove('opacity-0'), 10);
+
         document.getElementById('infoNamePhone').innerText = `${data.customer_name} / ${data.phone}`;
         document.getElementById('statusSelect').value = data.status || "자료업로드";
         document.getElementById('memoText').value = data.memo || "";
 
         currentImages = data.images.map(img => ({
             id: img._id,
-            image_path: img.url,
+            // SECURITY: Use SITE_URL proxy if library is blocked, as site domain is verified allowed
+            image_path: HTTP_MODE ? `${SITE_URL}/getImage?storageId=${img.storageId}` : img.url,
             location_type: img.location,
             reference_type: img.refType,
             width: img.width || 0,
@@ -173,9 +178,11 @@ async function loadRequestDetail(requestId) {
             selectImage(currentImages[0].id);
         }
 
-        // UI Selection Highlight
+        // Highlight active item in sidebar
         document.querySelectorAll('#requestList li').forEach(li => {
-            li.classList.toggle('bg-blue-50', li.innerHTML.includes(requestId.substring(0, 8)));
+            const isMatch = li.innerHTML.includes(requestId.substring(0, 8));
+            li.classList.toggle('bg-blue-50', isMatch);
+            li.classList.toggle('sidebar-item-active', isMatch);
         });
     } catch (err) {
         console.error(err);

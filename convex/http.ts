@@ -118,6 +118,27 @@ http.route({
     }),
 });
 
+// 7. 이미지 다이렉트 프록시 (HTTP GET)
+http.route({
+    path: "/getImage",
+    method: "GET",
+    handler: httpAction(async (ctx, request) => {
+        const url = new URL(request.url);
+        const storageId = url.searchParams.get("storageId");
+        if (!storageId) return new Response("Missing storageId", { status: 400 });
+        const blob = await ctx.storage.get(storageId);
+        if (!blob) return new Response("Image not found", { status: 404 });
+        return new Response(blob, {
+            status: 200,
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Content-Type": "image/jpeg",
+                "Cache-Control": "public, max-age=31536000, immutable",
+            },
+        });
+    }),
+});
+
 // OPTIONS HANDLERS
 http.route({ path: "/submit", method: "OPTIONS", handler: httpAction(async () => new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type" } })) });
 http.route({ path: "/list", method: "OPTIONS", handler: httpAction(async () => new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS" } })) });
@@ -125,5 +146,6 @@ http.route({ path: "/getDetail", method: "OPTIONS", handler: httpAction(async ()
 http.route({ path: "/update", method: "OPTIONS", handler: httpAction(async () => new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type" } })) });
 http.route({ path: "/generateUploadUrl", method: "OPTIONS", handler: httpAction(async () => new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, OPTIONS" } })) });
 http.route({ path: "/saveImage", method: "OPTIONS", handler: httpAction(async () => new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type" } })) });
+http.route({ path: "/getImage", method: "OPTIONS", handler: httpAction(async () => new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS" } })) });
 
 export default http;
