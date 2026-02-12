@@ -51,23 +51,35 @@ async function initConvex() {
     const statusTxt = document.getElementById('statusTxt');
     const statusDot = document.getElementById('statusDot');
 
-    try {
-        const { ConvexClient } = await import("https://esm.sh/convex@1.11.0?bundle");
-        convexClient = new ConvexClient(CONVEX_URL);
-        console.log("Admin: Convex Client Initialized");
+    if (statusTxt) statusTxt.innerText = "CONNECTING";
 
-        if (statusTxt) statusTxt.innerText = "ONLINE";
-        if (statusDot) {
-            statusDot.className = "w-2 h-2 rounded-full bg-green-500";
-            statusDot.classList.remove('pulse');
+    const sources = [
+        "https://esm.sh/convex@1.11.0?bundle",
+        "https://cdn.jsdelivr.net/npm/convex@1.11.0/dist/browser/index.js",
+        "https://unpkg.com/convex@1.11.0/dist/browser/index.js",
+        "https://cdn.skypack.dev/convex@1.11.0?min"
+    ];
+
+    for (let src of sources) {
+        try {
+            const { ConvexClient } = await import(src);
+            convexClient = new ConvexClient(CONVEX_URL);
+            console.log("Admin: Connected via " + src);
+
+            if (statusTxt) statusTxt.innerText = "ONLINE";
+            if (statusDot) {
+                statusDot.className = "w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]";
+                statusDot.classList.remove('pulse');
+            }
+            loadRequests();
+            return;
+        } catch (e) {
+            console.warn(`Source ${src} failed for admin...`);
         }
-
-        loadRequests();
-    } catch (err) {
-        console.error("Failed to load Convex:", err);
-        if (statusTxt) statusTxt.innerText = "OFFLINE";
-        if (statusDot) statusDot.className = "w-2 h-2 rounded-full bg-red-500";
     }
+
+    if (statusTxt) statusTxt.innerText = "OFFLINE";
+    if (statusDot) statusDot.className = "w-2 h-2 rounded-full bg-red-500";
 }
 
 async function loadRequests() {
