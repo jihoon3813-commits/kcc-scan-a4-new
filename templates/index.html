@@ -10,11 +10,44 @@
     <style>
         body {
             font-family: 'Noto Sans KR', sans-serif;
-            background-color: #f1f5f9;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .btn-blue {
+            background-color: #2563eb;
+            color: white;
+            border-radius: 1rem;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+
+        .btn-blue:hover {
+            background-color: #1d4ed8;
+        }
+
+        .btn-blue:active {
+            transform: scale(0.98);
+        }
+
+        .ref-card {
+            border: 2px solid #e2e8f0;
+            border-radius: 1rem;
+            padding: 1rem;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .ref-card.active {
+            border-color: #2563eb;
+            background-color: #eff6ff;
+            color: #1d4ed8;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
         }
 
         .pulse {
-            animation: pulse 2s infinite;
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
 
         @keyframes pulse {
@@ -25,127 +58,121 @@
             }
 
             50% {
-                opacity: 0.5;
+                opacity: .5;
             }
-        }
-
-        .ref-btn {
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 12px;
-            font-weight: bold;
-            background: white;
-            transition: all 0.2s;
-            color: #64748b;
-        }
-
-        .ref-btn.active {
-            border-color: #2563eb;
-            background-color: #eff6ff;
-            color: #1d4ed8;
-            box-shadow: 0 0 0 2px #bfdbfe;
         }
     </style>
 </head>
 
-<body class="min-h-screen py-6 px-4 flex flex-col items-center">
+<body class="min-h-screen py-10 px-4 flex flex-col items-center">
 
-    <div class="max-w-md w-full bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100">
+    <div class="max-w-md w-full bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-gray-100">
         <!-- Header -->
-        <div class="bg-blue-600 px-6 py-8 text-center text-white">
+        <div class="bg-blue-600 p-8 text-center">
             <img src="https://cdn.imweb.me/upload/S20250904697320f4fd9ed/e840c9a46f66a.png" alt="Logo"
                 class="h-10 mx-auto mb-3">
-            <h1 class="text-2xl font-bold tracking-tight">창문 접수 시스템</h1>
-            <p class="text-blue-100 text-sm mt-1">정확한 측정을 위해 사진을 보내주세요</p>
+            <h1 class="text-white text-2xl font-black">창문 접수 시스템</h1>
+            <p class="text-blue-100 text-sm mt-1">간편하게 사진을 찍어 보내주세요</p>
         </div>
 
-        <div id="content" class="p-6 space-y-6">
-            <!-- User Section -->
+        <div id="formSection" class="p-8 space-y-7">
+            <!-- 1. Basic Info -->
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs font-black text-gray-400 uppercase ml-1">이름</label>
+                    <input type="text" id="uName" placeholder="홍길동"
+                        class="w-full bg-gray-50 border-gray-100 rounded-xl p-4 border focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all mt-1">
+                </div>
+                <div>
+                    <label class="text-xs font-black text-gray-400 uppercase ml-1">연락처</label>
+                    <input type="tel" id="uPhone" placeholder="010-0000-0000" maxlength="13"
+                        class="w-full bg-gray-50 border-gray-100 rounded-xl p-4 border focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all mt-1">
+                </div>
+            </div>
+
+            <!-- 2. 기준물체 -->
             <div class="space-y-3">
-                <input type="text" id="name" placeholder="성함 (예: 홍길동)"
-                    class="w-full bg-gray-50 border-gray-200 rounded-xl p-4 border focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all">
-                <input type="tel" id="phone" placeholder="연락처 (010-0000-0000)" maxlength="13"
-                    class="w-full bg-gray-50 border-gray-200 rounded-xl p-4 border focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all">
-            </div>
-
-            <!-- Standard Object -->
-            <div class="bg-slate-50 p-5 rounded-2xl border border-gray-100">
-                <p class="text-sm font-bold text-gray-800 mb-4 text-center">1. 기준물체 선택</p>
-                <div class="flex gap-2">
-                    <button type="button" id="btnA4" onclick="window.setRef('A4')" class="ref-btn flex-1 active">A4
-                        용지</button>
-                    <button type="button" id="btnCard" onclick="window.setRef('CREDIT_CARD')"
-                        class="ref-btn flex-1">신용카드</button>
+                <label class="text-xs font-black text-gray-400 uppercase ml-1">1. 기준물체 선택</label>
+                <div class="flex gap-3">
+                    <div id="rA4" onclick="setRef('A4')" class="ref-card flex-1 text-center font-bold active">A4 용지
+                    </div>
+                    <div id="rCard" onclick="setRef('CREDIT_CARD')" class="ref-card flex-1 text-center font-bold">신용카드
+                    </div>
                 </div>
-                <div class="mt-4 bg-white p-2 rounded-xl border">
+                <div class="bg-slate-50 p-2 rounded-2xl border border-gray-100">
                     <img src="https://cdn.imweb.me/upload/S20250904697320f4fd9ed/6ae0c52001c90.jpeg"
-                        class="w-full rounded-lg">
+                        class="w-full rounded-xl shadow-sm">
                 </div>
             </div>
 
-            <!-- List Area -->
-            <div class="space-y-2">
-                <p class="text-xs font-bold text-gray-500 ml-1">📸 등록된 사진 목록</p>
-                <div id="list"
-                    class="min-h-[60px] bg-slate-50 border-2 border-dashed border-gray-200 rounded-2xl p-3 flex flex-col gap-2">
-                    <p id="emptyMsg" class="text-xs text-gray-400 text-center py-4">아직 선택된 사진이 없습니다.</p>
+            <!-- 3. Photo List -->
+            <div class="space-y-3">
+                <label class="text-xs font-black text-gray-400 uppercase ml-1">📸 촬영된 사진 목록</label>
+                <div id="imgList"
+                    class="min-h-[80px] bg-slate-50 border-2 border-dashed border-gray-200 rounded-2xl p-4 flex flex-col gap-3 justify-center">
+                    <p id="emptyTxt" class="text-xs text-gray-400 text-center font-medium">아직 추가된 사진이 없습니다.</p>
                 </div>
             </div>
 
-            <!-- Controls -->
-            <div class="bg-blue-50 p-5 rounded-3xl border border-blue-100 space-y-4">
-                <select id="loc"
-                    class="w-full border-blue-200 rounded-xl p-3 f-bold text-blue-800 bg-white shadow-sm outline-none">
+            <!-- 4. Controller -->
+            <div class="bg-blue-50 p-6 rounded-[2rem] border border-blue-100 space-y-4">
+                <label class="text-[10px] font-black text-blue-500 uppercase">2. 위치 선택 및 촬영</label>
+                <select id="uLoc"
+                    class="w-full bg-white border-blue-100 rounded-xl p-3.5 font-bold text-blue-900 shadow-sm outline-none">
                     <option value="거실">거실</option>
                     <option value="안방">안방</option>
+                    <option value="거실베란다">거실베란다</option>
+                    <option value="안방베란다">안방베란다</option>
+                    <option value="주방">주방</option>
                     <option value="작은방1">작은방1</option>
                     <option value="작은방2">작은방2</option>
-                    <option value="주방">주방</option>
-                    <option value="베란다">베란다</option>
                 </select>
-                <button type="button" id="photoBtn" onclick="window.openCamera()"
-                    class="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold text-xl shadow-lg hover:shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all">
-                    📸 사진 촬영/등록
+                <button type="button" id="camBtn" onclick="openCam()"
+                    class="w-full py-5 btn-blue text-xl shadow-xl flex items-center justify-center gap-2">
+                    <span>� 사진 촬영/등록</span>
                 </button>
-                <input type="file" id="fileInp" accept="image/*" class="hidden" onchange="window.handleFile(this)">
+                <input type="file" id="fileInp" accept="image/*" class="hidden" onchange="fileSelected(this)">
             </div>
 
-            <!-- Submit -->
-            <button type="button" id="submitBtn" onclick="window.finalSubmit()"
-                class="w-full py-5 bg-gray-900 text-white rounded-2xl font-bold text-lg shadow-xl hover:bg-black transition-all">
+            <!-- Final Submit -->
+            <button type="button" id="subBtn" onclick="doSubmit()"
+                class="w-full py-5 bg-gray-900 text-white rounded-2xl font-black text-lg shadow-2xl hover:bg-black transition-all">
                 최종 접수 완료하기
             </button>
         </div>
 
-        <div id="done" class="hidden p-16 text-center">
-            <div class="text-7xl mb-6">🎯</div>
-            <h2 class="text-2xl font-black text-gray-900 mb-2">접수 완료!</h2>
-            <p class="text-gray-500 mb-10 leading-relaxed">정보가 서버에 안전하게 기록되었습니다.<br>금방 확인 후 연락드리겠습니다.</p>
-            <button onclick="location.reload()" class="w-full py-4 bg-blue-50 text-blue-600 rounded-2xl font-bold">새로
+        <!-- Success Screen -->
+        <div id="doneScreen" class="hidden p-16 text-center animate-pulse">
+            <div class="text-8xl mb-6">✨</div>
+            <h2 class="text-3xl font-black text-gray-900 mb-3">접수 완료!</h2>
+            <p class="text-gray-500 mb-10 font-medium">소중한 정보가 서버에 전달되었습니다.<br>검토 후 빠르게 연락드릴게요.</p>
+            <button onclick="location.reload()" class="w-full py-4 bg-gray-100 rounded-2xl font-bold text-gray-600">다시
                 접수하기</button>
         </div>
     </div>
 
-    <!-- UI Logic (Pure JS) -->
     <script>
-        // State
-        window.APP_STATE = { images: [], ref: 'A4', isReady: false };
+        // --- GLOBAL STATE ---
+        window.QUEUE = [];
+        window.REF_TYPE = 'A4';
+        window.CONVEX_CLIENT = null;
 
-        // UI Functions
-        window.setRef = (type) => {
-            window.APP_STATE.ref = type;
-            document.getElementById('btnA4').classList.toggle('active', type === 'A4');
-            document.getElementById('btnCard').classList.toggle('active', type === 'CREDIT_CARD');
-        };
+        // --- UI FUNCTIONS ---
+        function setRef(t) {
+            window.REF_TYPE = t;
+            document.getElementById('rA4').classList.toggle('active', t === 'A4');
+            document.getElementById('rCard').classList.toggle('active', t === 'CREDIT_CARD');
+        }
 
-        window.openCamera = () => { document.getElementById('fileInp').click(); };
+        function openCam() { document.getElementById('fileInp').click(); }
 
-        window.handleFile = async (inp) => {
+        async function fileSelected(inp) {
             const file = inp.files[0];
             if (!file) return;
-            const btn = document.getElementById('photoBtn');
-            const original = btn.innerText;
-            btn.innerText = "⏳ 사진 압축 중...";
+
+            const btn = document.getElementById('camBtn');
+            const oldTxt = btn.innerHTML;
+            btn.innerHTML = "<span>⏳ 압축 중...</span>";
             btn.disabled = true;
 
             try {
@@ -161,117 +188,110 @@
                             else { if (h > M) { w *= M / h; h = M; } }
                             c.width = w; c.height = h;
                             c.getContext('2d').drawImage(i, 0, 0, w, h);
-                            c.toBlob(res, 'image/jpeg', 0.8);
+                            c.toBlob(res, 'image/jpeg', 0.82);
                         };
                         i.src = e.target.result;
                     };
                     r.readAsDataURL(file);
                 });
-                window.APP_STATE.images.push({ blob, loc: document.getElementById('loc').value, ref: window.APP_STATE.ref });
-                render();
+
+                window.QUEUE.push({ blob, loc: document.getElementById('uLoc').value, ref: window.REF_TYPE });
+                renderList();
             } finally {
-                btn.innerText = original;
+                btn.innerHTML = oldTxt;
                 btn.disabled = false;
                 inp.value = "";
             }
-        };
+        }
 
-        function render() {
-            const list = document.getElementById('list');
-            if (window.APP_STATE.images.length === 0) return;
-            document.getElementById('emptyMsg').classList.add('hidden');
+        function renderList() {
+            const list = document.getElementById('imgList');
+            document.getElementById('emptyTxt').classList.add('hidden');
             list.innerHTML = "";
-            window.APP_STATE.images.forEach((img, idx) => {
-                const url = URL.createObjectURL(img.blob);
-                const item = document.createElement('div');
-                item.className = "flex items-center justify-between bg-white border border-gray-100 p-2 rounded-2xl shadow-sm animate-inside";
-                item.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <img src="${url}" class="w-12 h-12 object-cover rounded-xl shadow-inner">
+            window.QUEUE.forEach((it, idx) => {
+                const url = URL.createObjectURL(it.blob);
+                const el = document.createElement('div');
+                el.className = "flex items-center justify-between bg-white border border-gray-100 p-3 rounded-2xl shadow-sm";
+                el.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <img src="${url}" class="w-14 h-14 object-cover rounded-xl border border-gray-50 shadow-inner">
                         <div>
-                            <p class="text-sm font-black text-gray-800">${img.loc}</p>
-                            <p class="text-[10px] text-gray-400 font-bold uppercase">${img.ref}</p>
+                            <p class="text-sm font-black text-gray-800">${it.loc}</p>
+                            <p class="text-[10px] font-bold text-gray-400 tracking-widest uppercase">${it.ref}</p>
                         </div>
                     </div>
-                    <button onclick="window.delImg(${idx})" class="w-10 h-10 text-red-300 hover:text-red-500 font-bold">✕</button>
+                    <button onclick="delImg(${idx})" class="w-10 h-10 text-gray-300 hover:text-red-500 font-bold transition-colors">✕</button>
                 `;
-                list.appendChild(item);
+                list.appendChild(el);
             });
         }
 
-        window.delImg = (idx) => { window.APP_STATE.images.splice(idx, 1); if (window.APP_STATE.images.length === 0) location.reload(); else render(); };
+        function delImg(idx) {
+            window.QUEUE.splice(idx, 1);
+            if (window.QUEUE.length === 0) location.reload(); else renderList();
+        }
 
-        // Fallback for click if backend is slow
-        window.finalSubmit = () => {
-            if (!window.APP_STATE.isReady) {
-                alert("서버와 연결이 지연되고 있습니다. 잠시만 기다려 주세요.");
-            } else {
-                alert("접수 데이터 확인 중..."); // This will be overridden by the module script
-            }
-        };
-
-        // Phone formatting & Auto-fill
+        // --- INITIALIZATION ---
         window.onload = () => {
             const p = new URLSearchParams(window.location.search);
-            if (p.get('name')) document.getElementById('name').value = p.get('name');
-            if (p.get('phone')) document.getElementById('phone').value = p.get('phone');
+            if (p.get('name')) document.getElementById('uName').value = p.get('name');
+            if (p.get('phone')) document.getElementById('uPhone').value = p.get('phone');
             if (window.location.search) window.history.replaceState({}, '', window.location.pathname);
 
-            document.getElementById('phone').oninput = (e) => {
+            // Phone Masking
+            document.getElementById('uPhone').oninput = (e) => {
                 let v = e.target.value.replace(/\D/g, '');
                 if (v.length > 3 && v.length <= 7) v = v.slice(0, 3) + '-' + v.slice(3);
                 else if (v.length > 7) v = v.slice(0, 3) + '-' + v.slice(3, 7) + '-' + v.slice(7, 11);
                 e.target.value = v;
             };
-
-            // Initial button state
-            document.getElementById('submitBtn').innerText = "⏳ 서버 연결 중...";
         };
-    </script>
 
-    <!-- Backend Logic (Module) -->
-    <script type="module">
-        import { ConvexClient } from "https://cdn.jsdelivr.net/npm/convex@1.11.0/dist/browser/index.js";
-        const client = new ConvexClient("https://adventurous-barracuda-87.convex.cloud");
+        // --- SUBMISSION (MODULARIZED CLIENT) ---
+        async function doSubmit() {
+            const name = document.getElementById('uName').value.trim();
+            const phone = document.getElementById('uPhone').value.trim();
+            const btn = document.getElementById('subBtn');
 
-        // When ready, update state and button
-        window.APP_STATE.isReady = true;
-        const btn = document.getElementById('submitBtn');
-        btn.innerText = "최종 접수 완료하기";
+            if (!name || !phone) { alert("성함과 연락처를 입력해 주세요."); return; }
+            if (window.QUEUE.length === 0) { alert("사진을 최소 1장 등록해 주세요."); return; }
 
-        window.finalSubmit = async () => {
-            const name = document.getElementById('name').value.trim();
-            const phone = document.getElementById('phone').value.trim();
-
-            if (!name || !phone) { alert("성함과 연락처를 모두 입력해 주세요."); return; }
-            if (window.APP_STATE.images.length === 0) { alert("창문 사진을 1장 이상 등록해 주세요."); return; }
+            if (!window.CONVEX_CLIENT) {
+                alert("서버 연결 세팅 중입니다. 1초만 기다렸다가 다시 눌러주세요.");
+                return;
+            }
 
             btn.disabled = true;
-            btn.innerHTML = '<span class="pulse font-black text-blue-300">🚀 데이터 전송 중...</span>';
+            btn.innerHTML = '<span class="pulse font-black text-blue-400">🚀 전송 중... (잠시만 대기)</span>';
 
             try {
-                const requestId = await client.mutation("requests:submit", { name, phone });
+                const requestId = await window.CONVEX_CLIENT.mutation("requests:submit", { name, phone });
 
-                for (let i = 0; i < window.APP_STATE.images.length; i++) {
-                    const img = window.APP_STATE.images[i];
-                    btn.innerText = `업로드 중 (${i + 1}/${window.APP_STATE.images.length})`;
-
-                    const uploadUrl = await client.mutation("images:generateUploadUrl");
-                    const res = await fetch(uploadUrl, { method: "POST", body: img.blob });
+                for (let i = 0; i < window.QUEUE.length; i++) {
+                    const it = window.QUEUE[i];
+                    btn.innerText = `업로드 중 (${i + 1}/${window.QUEUE.length})`;
+                    const url = await window.CONVEX_CLIENT.mutation("images:generateUploadUrl");
+                    const res = await fetch(url, { method: "POST", body: it.blob });
                     const { storageId } = await res.json();
-
-                    await client.mutation("images:saveImage", { requestId, storageId, location: img.loc, refType: img.ref });
+                    await window.CONVEX_CLIENT.mutation("images:saveImage", { requestId, storageId, location: it.loc, refType: it.ref });
                 }
 
-                document.getElementById('content').classList.add('hidden');
-                document.getElementById('done').classList.remove('hidden');
+                document.getElementById('formSection').classList.add('hidden');
+                document.getElementById('doneScreen').classList.remove('hidden');
                 alert("접수가 정상적으로 완료되었습니다!");
             } catch (err) {
-                alert("전송 실패: " + err.message);
+                alert("접수 실패: " + err.message);
                 btn.disabled = false;
                 btn.innerText = "최종 접수 완료하기";
             }
-        };
+        }
+    </script>
+
+    <!-- BACKEND CLIENT (Background Loading) -->
+    <script type="module">
+        import { ConvexClient } from "https://cdn.jsdelivr.net/npm/convex@1.11.0/dist/browser/index.js";
+        const client = new ConvexClient("https://adventurous-barracuda-87.convex.cloud");
+        window.CONVEX_CLIENT = client; // Expose to global when ready
     </script>
 </body>
 
