@@ -288,7 +288,8 @@
         const CONVEX_URL = "https://adventurous-barracuda-87.convex.cloud";
         const client = new ConvexClient(CONVEX_URL);
 
-        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+        // Expose submit handler globally
+        window.handleFormSubmit = async function (e) {
             e.preventDefault();
             const btn = document.getElementById('submitBtn');
             const originalText = btn.innerText;
@@ -298,7 +299,10 @@
                 return;
             }
 
-            if (!e.target.name.value.trim() || !e.target.phone.value.trim()) {
+            const name = document.querySelector('input[name="name"]').value;
+            const phone = document.getElementById('phoneInput').value;
+
+            if (!name.trim() || !phone.trim()) {
                 alert("이름과 연락처를 입력해주세요.");
                 return;
             }
@@ -309,11 +313,11 @@
                 btn.innerText = "접수 정보 저장 중...";
                 btn.classList.add('animate-pulse');
 
-                const name = e.target.name.value;
-                const phone = e.target.phone.value;
+                console.log("Submitting request...", { name, phone });
 
                 // 1. Submit Request
                 const requestId = await client.mutation("requests:submit", { name, phone });
+                console.log("Request created:", requestId);
 
                 // 2. Upload Images
                 for (let i = 0; i < window.imagesQueue.length; i++) {
@@ -333,7 +337,7 @@
                     });
 
                     if (!response.ok) {
-                        throw new Error(`이미지(${i + 1}) 전송 실패: ${response.status} ${response.statusText}`);
+                        throw new Error(`이미지(${i + 1}) 전송 실패: ${response.status}`);
                     }
 
                     const { storageId } = await response.json();
@@ -345,6 +349,7 @@
                 }
 
                 // Success
+                btn.innerText = "접수 완료!";
                 alert("접수가 정상적으로 완료되었습니다!");
 
                 // Clear & Show Success Screen
@@ -357,8 +362,8 @@
                 console.error("Submission Error Details:", err);
 
                 let msg = "접수 중 오류가 발생했습니다.\n\n";
-                if (err.message.includes("fetch")) msg += "네트워크 연결 상태를 확인해주세요.";
-                else msg += `이유: ${err.message}`;
+                if (err.message.includes("failed to fetch")) msg += "원인: 인터넷 연결 상태를 확인해주세요.";
+                else msg += `원인: ${err.message}`;
 
                 alert(msg);
 
@@ -367,7 +372,12 @@
                 btn.innerText = "다시 접수하기";
                 btn.classList.remove('animate-pulse');
             }
-        });
+        };
+
+        // Attach listener using the global function
+        const form = document.getElementById('uploadForm');
+        form.removeEventListener('submit', window.handleFormSubmit); // Clean up old listeners just in case
+        form.addEventListener('submit', window.handleFormSubmit);
     </script>
 </body>
 
