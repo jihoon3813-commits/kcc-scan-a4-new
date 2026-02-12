@@ -4,234 +4,277 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>관리자 페이지 - 창문 분석</title>
+    <title>SMART SCAN ADMIN - 창문 분석 관리</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap"
+        rel="stylesheet">
     <style>
         body {
             font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .sidebar-item-active {
+            background-color: #eff6ff;
+            border-left: 4px solid #2563eb;
         }
 
         .canvas-container {
+            background: #1e293b;
             position: relative;
-            width: 100%;
-            height: 600px;
-            background: #333;
             overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
 
-        canvas {
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
         }
     </style>
 </head>
 
-<body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
+<body class="h-screen flex flex-col overflow-hidden text-slate-900">
 
     <!-- Header -->
-    <header class="bg-white shadow z-10 p-4 flex justify-between items-center">
-        <div class="flex items-center">
-            <img src="https://cdn.imweb.me/upload/S20250904697320f4fd9ed/5b115594e9a66.png" alt="Logo" class="h-8 mr-3">
-            <h1 class="text-xl font-bold text-gray-800">창문 사이즈 분석 관리자</h1>
+    <header class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center z-50 shadow-sm">
+        <div class="flex items-center gap-4">
+            <img src="https://cdn.imweb.me/upload/S20250904697320f4fd9ed/e840c9a46f66a.png" alt="Logo" class="h-7">
+            <div class="h-6 w-[1px] bg-slate-200"></div>
+            <h1 class="text-xl font-black italic tracking-tighter uppercase text-slate-800">SMART SCAN <span
+                    class="text-blue-600">ADMIN</span></h1>
         </div>
-        <button onclick="location.reload()" class="text-sm text-gray-500 hover:text-gray-700">새로고침</button>
+        <div class="flex items-center gap-4">
+            <div id="statusIndicator"
+                class="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
+                <div id="statusDot" class="w-2 h-2 rounded-full bg-orange-400 pulse"></div>
+                <span id="statusTxt"
+                    class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Connecting</span>
+            </div>
+            <button onclick="location.reload()"
+                class="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                    </path>
+                </svg>
+            </button>
+        </div>
     </header>
 
     <div class="flex flex-1 overflow-hidden">
-        <!-- Sidebar List -->
-        <aside class="w-80 bg-white border-r border-gray-200 overflow-y-auto z-0 flex flex-col">
-            <div class="p-4 border-b">
-                <h2 class="font-bold text-gray-700">접수 목록</h2>
+        <!-- Sidebar: Request List -->
+        <aside class="w-80 bg-white border-r border-slate-200 flex flex-col shadow-inner z-40">
+            <div class="p-5 border-b border-slate-100 bg-slate-50/50">
+                <h2 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Live Feed</h2>
             </div>
-            <ul id="requestList" class="divide-y divide-gray-100">
-                <!-- Javascript will populate this -->
-                <li class="p-4 text-center text-gray-500">로딩 중...</li>
-            </ul>
+            <div id="requestList" class="flex-1 overflow-y-auto">
+                <div class="p-10 text-center animate-pulse">
+                    <p class="text-sm font-bold text-slate-300">데이터 로딩 중...</p>
+                </div>
+            </div>
         </aside>
 
-        <!-- Main Content (Analysis Workspace) -->
-        <main class="flex-1 flex flex-col relative h-full">
-            <div id="emptyState" class="absolute inset-0 flex items-center justify-center text-gray-400 bg-gray-50 z-0">
-                <p>왼쪽 목록에서 항목을 선택하세요</p>
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col relative bg-slate-100 min-w-0">
+            <!-- Empty State -->
+            <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-slate-300 z-10">
+                <div class="text-6xl mb-4 opacity-20 italic">SELECT DATA</div>
+                <p class="font-bold text-slate-400">왼쪽 목록에서 분석할 항목을 선택하세요</p>
             </div>
 
-            <div id="workspace" class="hidden flex-1 flex flex-col h-full bg-gray-50">
+            <!-- Workspace -->
+            <div id="workspace" class="hidden flex-1 flex flex-col h-full opacity-0 transition-opacity duration-300">
                 <!-- Image Gallery -->
-                <div id="imageGallery" class="bg-gray-100 border-b p-2 flex space-x-2 overflow-x-auto">
-                    <!-- Thumbnails will be injected here -->
+                <div id="imageGallery"
+                    class="bg-white border-b border-slate-200 p-2 flex gap-2 overflow-x-auto min-h-[100px] items-center px-4 scrollbar-hide">
+                    <!-- Thumbnails -->
                 </div>
+
                 <!-- Toolbar -->
-                <div class="bg-white border-b p-2 flex space-x-2 items-center shadow-sm z-10">
-                    <span class="text-sm font-bold text-gray-700 px-2">도구:</span>
-                    <button onclick="setTool('select')"
-                        class="tool-btn px-3 py-1 rounded hover:bg-gray-100 text-sm border border-transparent focus:bg-blue-50 focus:border-blue-500 focus:text-blue-700 font-medium active"
-                        data-tool="select">✋ 이동</button>
-                    <button onclick="setTool('ref')"
-                        class="tool-btn px-3 py-1 rounded hover:bg-gray-100 text-sm border border-transparent focus:bg-green-50 focus:border-green-500 focus:text-green-700 font-medium"
-                        data-tool="ref">🟩 기준물체(A4/카드)</button>
-                    <button onclick="setTool('measure')"
-                        class="tool-btn px-3 py-1 rounded hover:bg-gray-100 text-sm border border-transparent focus:bg-red-50 focus:border-red-500 focus:text-red-700 font-medium"
-                        data-tool="measure">📏 창문 측정</button>
-                    <div class="border-l h-6 mx-2"></div>
-                    <button onclick="resetZoom()"
-                        class="bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm hover:bg-gray-300 shadow-sm">🔍 줌
-                        리셋</button>
-                    <button onclick="autoDetect()"
-                        class="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700 shadow-sm flex items-center">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
-                            </path>
-                        </svg>
-                        자동 분석
-                    </button>
-                    <button onclick="calculateRealSize()"
-                        class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 shadow-sm">⚡ 치수
-                        계산</button>
-                </div>
-
-                <div class="flex flex-1 overflow-hidden">
-                    <!-- Canvas Area -->
-                    <div class="flex-1 bg-gray-800 overflow-hidden relative" id="canvasContainer">
-                        <!-- Loading Spinner Overlay -->
-                        <div id="imageLoadingOverlay"
-                            class="hidden absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-900 bg-opacity-70 text-white">
-                            <div
-                                class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mb-4">
-                            </div>
-                            <p class="text-sm font-medium">사진 불러오는 중...</p>
-                        </div>
-                        <canvas id="editorCanvas" class="max-w-full max-h-full"></canvas>
-
-                        <!-- Floating Action Button for Calculation -->
-                        <button id="floatingCalcBtn" onclick="calculateRealSize(); hideFloatingBtn();"
-                            class="hidden absolute z-30 bg-blue-600 text-white px-4 py-2 rounded-full shadow-2xl hover:bg-blue-700 transition-all flex items-center font-bold border-2 border-white">
-                            <span class="mr-1">⚡</span> 치수 계산
+                <nav
+                    class="bg-white border-b border-slate-200 p-2 flex items-center justify-between px-6 shadow-sm z-30">
+                    <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                        <button onclick="setTool('select')" data-tool="select"
+                            class="tool-btn px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 hover:bg-white active:scale-95">
+                            ✋ 이동
+                        </button>
+                        <button onclick="setTool('ref')" data-tool="ref"
+                            class="tool-btn px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 hover:bg-white active:scale-95">
+                            🟩 기준설정
+                        </button>
+                        <button onclick="setTool('measure')" data-tool="measure"
+                            class="tool-btn px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 hover:bg-white active:scale-95">
+                            📏 창문측정
                         </button>
                     </div>
 
-                    <!-- Right Panel (Info & Result) -->
-                    <div class="w-80 bg-white border-l p-4 overflow-y-auto shadow-xl z-20">
-                        <h3 class="font-bold text-lg mb-4 text-gray-800">분석 결과</h3>
+                    <div class="flex items-center gap-3">
+                        <button onclick="resetZoom()"
+                            class="px-3 py-2 text-slate-400 hover:text-slate-600 text-xs font-bold transition-colors">🔍
+                            줌 리셋</button>
+                        <div class="w-[1px] h-4 bg-slate-200"></div>
+                        <button onclick="autoDetect()"
+                            class="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-black shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-2">
+                            🤖 AI 자동분석
+                        </button>
+                    </div>
+                </nav>
 
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-xs font-medium text-gray-500">고객명 / 연락처</label>
-                                <p id="infoNamePhone" class="text-sm font-semibold text-gray-900">-</p>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-500">위치 / 기준물체</label>
-                                <p id="infoLocationRef" class="text-sm text-gray-900">-</p>
-                            </div>
+                <div class="flex flex-1 overflow-hidden relative">
+                    <!-- Canvas -->
+                    <div id="canvasContainer" class="flex-1 canvas-container relative">
+                        <canvas id="editorCanvas"></canvas>
 
-                            <div class="bg-gray-100 p-3 rounded-lg border border-gray-200">
-                                <div class="flex justify-between items-center mb-2">
-                                    <label class="block text-xs font-bold text-gray-700">기준물체 설정</label>
+                        <!-- Floating Calc Button -->
+                        <button id="floatingCalcBtn" onclick="calculateRealSize()"
+                            class="hidden absolute z-50 bg-black text-white px-6 py-3 rounded-full font-black shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-white/20">
+                            ⚡ 결과 계산하기
+                        </button>
+
+                        <!-- Loading Overlay -->
+                        <div id="imageLoadingOverlay"
+                            class="hidden absolute inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center text-white transition-all">
+                            <div
+                                class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4">
+                            </div>
+                            <p class="font-black italic tracking-widest uppercase opacity-80">Loading High-Res</p>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel (Results) -->
+                    <div class="w-80 bg-white border-l border-slate-200 flex flex-col shadow-2xl z-40">
+                        <div class="p-6 overflow-y-auto flex-1 space-y-8">
+                            <section>
+                                <label
+                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Customer
+                                    Info</label>
+                                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                    <p id="infoNamePhone" class="text-lg font-black text-slate-800">-</p>
+                                    <p id="infoLocationRef"
+                                        class="text-xs font-bold text-blue-500 mt-1 uppercase tracking-tighter">-</p>
+                                </div>
+                            </section>
+
+                            <section class="space-y-4">
+                                <div class="flex justify-between items-end">
+                                    <label
+                                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Calibration</label>
                                     <button id="lockRefBtn" onclick="toggleRefLock()"
-                                        class="text-[10px] px-2 py-0.5 bg-gray-200 rounded border border-gray-300 hover:bg-gray-300 transition-colors">
-                                        🔓 잠금해제 상태
-                                    </button>
+                                        class="text-[10px] font-black text-slate-400 border-b border-slate-200 pb-0.5 transition-colors">Unlock</button>
                                 </div>
-                                <p class="text-[10px] text-gray-500 mb-1">💡 팁: 스페이스바를 누른 채 이동 가능</p>
-                            </div>
+                                <div class="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 flex flex-col gap-2">
+                                    <p class="text-[10px] font-bold text-blue-600/60 leading-tight">TIP: 기준물체(A4/카드)를
+                                        드래그하여 영역을 지정한 후 잠그면 더 정확한 측정이 가능합니다.</p>
+                                </div>
+                            </section>
 
-                            <hr>
-
-                            <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                <label class="block text-xs font-bold text-blue-700 mb-2">측정 결과 (3회 평균)</label>
-
-                                <div class="space-y-3">
-                                    <!-- Width Group -->
-                                    <div>
-                                        <div class="flex justify-between text-[10px] text-gray-500 mb-1">
-                                            <span>가로 (Width)</span>
-                                            <span class="font-bold text-blue-600">평균: <span id="avgWidth">0</span>
-                                                mm</span>
-                                        </div>
-                                        <div class="grid grid-cols-3 gap-1">
-                                            <input type="number" id="w1"
-                                                class="w-full text-xs p-1 border rounded text-center val-input"
-                                                placeholder="1차">
-                                            <input type="number" id="w2"
-                                                class="w-full text-xs p-1 border rounded text-center val-input"
-                                                placeholder="2차">
-                                            <input type="number" id="w3"
-                                                class="w-full text-xs p-1 border rounded text-center val-input"
-                                                placeholder="3차">
-                                        </div>
+                            <section class="space-y-4">
+                                <label
+                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Measurement
+                                    Stats (mm)</label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="bg-slate-900 text-white p-4 rounded-2xl shadow-xl shadow-slate-200">
+                                        <p class="text-[10px] font-black text-slate-500 uppercase opacity-60">Avg Width
+                                        </p>
+                                        <p id="avgWidth" class="text-2xl font-black italic tracking-tighter">0</p>
                                     </div>
-
-                                    <!-- Height Group -->
-                                    <div>
-                                        <div class="flex justify-between text-[10px] text-gray-500 mb-1">
-                                            <span>세로 (Height)</span>
-                                            <span class="font-bold text-blue-600">평균: <span id="avgHeight">0</span>
-                                                mm</span>
-                                        </div>
-                                        <div class="grid grid-cols-3 gap-1">
-                                            <input type="number" id="h1"
-                                                class="w-full text-xs p-1 border rounded text-center val-input"
-                                                placeholder="1차">
-                                            <input type="number" id="h2"
-                                                class="w-full text-xs p-1 border rounded text-center val-input"
-                                                placeholder="2차">
-                                            <input type="number" id="h3"
-                                                class="w-full text-xs p-1 border rounded text-center val-input"
-                                                placeholder="3차">
-                                        </div>
+                                    <div class="bg-slate-900 text-white p-4 rounded-2xl shadow-xl shadow-slate-200">
+                                        <p class="text-[10px] font-black text-slate-500 uppercase opacity-60">Avg Height
+                                        </p>
+                                        <p id="avgHeight" class="text-2xl font-black italic tracking-tighter">0</p>
                                     </div>
                                 </div>
 
-                                <!-- Result hidden inputs for easy value mapping in code if needed -->
+                                <div class="space-y-3 pt-2">
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <input type="number" id="w1" placeholder="W1"
+                                            class="w-full bg-slate-50 border border-slate-100 rounded-xl p-2.5 text-xs font-black text-center focus:ring-2 focus:ring-blue-100 outline-none">
+                                        <input type="number" id="w2" placeholder="W2"
+                                            class="w-full bg-slate-50 border border-slate-100 rounded-xl p-2.5 text-xs font-black text-center focus:ring-2 focus:ring-blue-100 outline-none">
+                                        <input type="number" id="w3" placeholder="W3"
+                                            class="w-full bg-slate-50 border border-slate-100 rounded-xl p-2.5 text-xs font-black text-center focus:ring-2 focus:ring-blue-100 outline-none">
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <input type="number" id="h1" placeholder="H1"
+                                            class="w-full bg-slate-50 border border-slate-100 rounded-xl p-2.5 text-xs font-black text-center focus:ring-2 focus:ring-blue-100 outline-none">
+                                        <input type="number" id="h2" placeholder="H2"
+                                            class="w-full bg-slate-50 border border-slate-100 rounded-xl p-2.5 text-xs font-black text-center focus:ring-2 focus:ring-blue-100 outline-none">
+                                        <input type="number" id="h3" placeholder="H3"
+                                            class="w-full bg-slate-50 border border-slate-100 rounded-xl p-2.5 text-xs font-black text-center focus:ring-2 focus:ring-blue-100 outline-none">
+                                    </div>
+                                </div>
                                 <input type="hidden" id="resWidth" value="0">
                                 <input type="hidden" id="resHeight" value="0">
-                            </div>
+                            </section>
 
-                            <div>
-                                <label class="block text-xs font-medium text-gray-500 mb-1">진행 상태</label>
-                                <select id="statusSelect" class="w-full border-gray-300 rounded p-2 text-sm">
+                            <section class="space-y-3">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Review &
+                                    Notes</label>
+                                <select id="statusSelect"
+                                    class="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold bg-white focus:ring-4 focus:ring-blue-50 outline-none">
                                     <option value="자료업로드">자료업로드</option>
                                     <option value="분석완료">분석완료</option>
                                     <option value="견적완료">견적완료</option>
                                 </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-medium text-gray-500 mb-1">메모</label>
                                 <textarea id="memoText"
-                                    class="w-full border-gray-300 rounded p-2 text-sm h-24 resize-none"
+                                    class="w-full border border-slate-200 rounded-2xl p-4 text-sm font-medium h-32 resize-none bg-slate-50 focus:bg-white focus:ring-4 focus:ring-blue-50 outline-none placeholder:text-slate-300"
                                     placeholder="특이사항 메모..."></textarea>
+                            </section>
+                        </div>
+
+                        <!-- Footer Actions -->
+                        <div class="p-6 bg-slate-50 border-t border-slate-200 space-y-3">
+                            <button onclick="saveResult()"
+                                class="w-full bg-green-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-green-100 flex items-center justify-center gap-2 hover:bg-green-700 hover:-translate-y-0.5 transition-all active:translate-y-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                분석 데이터 저장
+                            </button>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="downloadImage()"
+                                    class="py-3 px-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black italic uppercase tracking-tighter text-slate-500 hover:bg-slate-100 transition-all">📥
+                                    Download</button>
+                                <button onclick="copyImageToClipboard()"
+                                    class="py-3 px-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black italic uppercase tracking-tighter text-slate-500 hover:bg-slate-100 transition-all">📋
+                                    Copy</button>
                             </div>
-
-                            <div class="pt-4 border-t space-y-2">
-                                <button onclick="saveResult()"
-                                    class="w-full bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700 shadow-md transition-colors flex items-center justify-center">
-                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M5 13l4 4L19 7"></path>
-                                    </svg>
-                                    저장 완료
-                                </button>
-
-                                <div class="grid grid-cols-2 gap-2">
-                                    <button onclick="downloadImage()"
-                                        class="bg-blue-50 text-blue-700 py-2 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors flex items-center justify-center border border-blue-200">
-                                        📥 이미지 다운
-                                    </button>
-                                    <button onclick="copyImageToClipboard()"
-                                        class="bg-blue-50 text-blue-700 py-2 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors flex items-center justify-center border border-blue-200">
-                                        📋 복사하기
-                                    </button>
-                                </div>
-
-                                <button onclick="resetAnalysis()"
-                                    class="w-full bg-gray-100 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors border border-gray-300">
-                                    🔄 분석 초기화
-                                </button>
-                            </div>
+                            <button onclick="resetAnalysis()"
+                                class="w-full pt-2 text-[10px] font-black text-slate-300 hover:text-red-400 transition-colors uppercase tracking-widest">Reset
+                                Analysis</button>
                         </div>
                     </div>
                 </div>
@@ -239,7 +282,14 @@
         </main>
     </div>
 
+    <!-- Convex Bridge & Core Logic -->
     <script src="/static/js/admin_analysis.js"></script>
+    <script>
+        // Initial tool set
+        setTimeout(() => {
+            if (typeof setTool === 'function') setTool('select');
+        }, 500);
+    </script>
 </body>
 
 </html>
