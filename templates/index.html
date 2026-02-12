@@ -120,7 +120,7 @@
 
             <!-- 4. Location & Registration -->
             <div class="bg-blue-50 p-6 rounded-[2.5rem] border border-blue-100 space-y-4 shadow-sm relative">
-                <select id="locSel"
+                <select id="locSel" onchange="toggleDirectInput(this)"
                     class="w-full bg-white border-blue-100 rounded-xl p-4 font-black text-blue-900 shadow-sm outline-none appearance-none cursor-pointer">
                     <option value="거실">거실</option>
                     <option value="안방">안방</option>
@@ -129,7 +129,10 @@
                     <option value="주방">주방</option>
                     <option value="작은방1">작은방1</option>
                     <option value="작은방2">작은방2</option>
+                    <option value="기타">기타 (직접입력)</option>
                 </select>
+                <input type="text" id="locDirect" placeholder="위치 직접 입력 (예: 다용도실)"
+                    class="hidden w-full bg-white border-blue-600 border-2 rounded-xl p-4 font-black text-blue-900 shadow-lg outline-none transition-all focus:ring-4 focus:ring-blue-100 placeholder:text-gray-300">
                 <button type="button" id="camBtn" onclick="document.getElementById('fileHidden').click()"
                     class="btn-blue w-full py-5 text-xl flex items-center justify-center gap-2">
                     <span>📸 사진 촬영 / 등록</span>
@@ -174,6 +177,16 @@
             document.getElementById('cardCard').classList.toggle('active', t === 'CREDIT_CARD');
         }
 
+        function toggleDirectInput(sel) {
+            var direct = document.getElementById('locDirect');
+            if (sel.value === '기타') {
+                direct.classList.remove('hidden');
+                direct.focus();
+            } else {
+                direct.classList.add('hidden');
+            }
+        }
+
         async function imgReady(inp) {
             var f = inp.files[0]; if (!f) return;
             var b = document.getElementById('camBtn');
@@ -196,7 +209,12 @@
                     };
                     r.readAsDataURL(f);
                 });
-                PHOTOS.push({ blob: blob, loc: document.getElementById('locSel').value, ref: CURRENT_REF });
+                var loc = document.getElementById('locSel').value;
+                if (loc === '기타') {
+                    loc = document.getElementById('locDirect').value || '기타';
+                }
+
+                PHOTOS.push({ blob: blob, loc: loc, ref: CURRENT_REF });
                 updatePhotos();
             } finally { b.innerText = old; b.disabled = false; inp.value = ""; }
         }
