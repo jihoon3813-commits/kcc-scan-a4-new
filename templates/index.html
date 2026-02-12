@@ -190,9 +190,9 @@
         async function imgReady(inp) {
             var f = inp.files[0]; if (!f) return;
             var b = document.getElementById('camBtn');
-            var old = b.innerText; b.innerText = "⏳ 사진 압축 중..."; b.disabled = true;
+            var old = b.innerHTML; b.innerHTML = "⏳ 사진 압축 중..."; b.disabled = true;
             try {
-                var blob = await new Promise(function (res) {
+                var blob = await new Promise(function (res, rej) {
                     var r = new FileReader();
                     r.onload = function (e) {
                         var i = new Image();
@@ -203,20 +203,34 @@
                             else { if (h > M) { w *= M / h; h = M; } }
                             v.width = w; v.height = h;
                             v.getContext('2d').drawImage(i, 0, 0, w, h);
-                            v.toBlob(res, 'image/jpeg', 0.85);
+                            v.toBlob(function (blb) { if (blb) res(blb); else rej(); }, 'image/jpeg', 0.85);
                         };
+                        i.onerror = rej;
                         i.src = e.target.result;
                     };
+                    r.onerror = rej;
                     r.readAsDataURL(f);
                 });
-                var loc = document.getElementById('locSel').value;
-                if (loc === '기타') {
-                    loc = document.getElementById('locDirect').value || '기타';
+                var locValue = document.getElementById('locSel').value;
+                var directInp = document.getElementById('locDirect');
+                var finalLoc = locValue;
+                if (locValue === '기타') {
+                    finalLoc = directInp.value || '기타';
+                    directInp.value = ""; // Clear for next one
                 }
 
-                PHOTOS.push({ blob: blob, loc: loc, ref: CURRENT_REF });
+                PHOTOS.push({ blob: blob, loc: finalLoc, ref: CURRENT_REF });
                 updatePhotos();
-            } finally { b.innerText = old; b.disabled = false; inp.value = ""; }
+
+                b.innerHTML = "✅ 등록 완료!";
+                setTimeout(() => { b.innerHTML = old; b.disabled = false; }, 800);
+            } catch (e) {
+                console.error(e);
+                alert("사진 처리 중 오류가 발생했습니다.");
+                b.innerHTML = old; b.disabled = false;
+            } finally {
+                inp.value = "";
+            }
         }
 
         function updatePhotos() {
