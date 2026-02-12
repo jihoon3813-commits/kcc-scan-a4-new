@@ -136,7 +136,6 @@
 
     <!-- UI Logic Script (Non-Module for Immediate Access) -->
     <script>
-        // Make imagesQueue global so the module script can see it
         window.imagesQueue = [];
 
         window.selectGlobalRef = function (type) {
@@ -160,13 +159,12 @@
             if (!input.files || !input.files[0]) return;
             const file = input.files[0];
 
-            // UI References
             const addBtn = document.querySelector('button[onclick*="fileInput"]');
             const originalAddBtnText = addBtn.innerHTML;
 
             // 1. Show Loading State
             addBtn.disabled = true;
-            addBtn.innerHTML = "⏳ 사진 처리 중... (잠시만 기다려주세요)";
+            addBtn.innerHTML = "⏳ 처리 중...";
             addBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
             try {
@@ -174,38 +172,22 @@
                 if (loc === '직접입력') loc = document.getElementById('curLocationEtc').value || '기타';
                 const ref = document.getElementById('globalRef').value;
 
-                console.log("Start processing:", file.name, file.type);
-
-                // Validation
                 if (!file.type.startsWith('image/')) {
-                    throw new Error("이미지 파일(JPG, PNG 등)만 선택할 수 있습니다.");
+                    throw new Error("이미지 파일만 선택 가능합니다.");
                 }
 
-                // Compress
                 const blob = await compressImage(file);
-
-                // Add to Queue
                 window.imagesQueue.push({ blob, loc, ref });
                 renderQueue();
 
-                // 2. Success Alert
-                // alert("사진이 정상적으로 등록되었습니다."); // Optional: Remove if too annoying, but user asked for it.
-                // Instead of alert, let's just create a toast or simple feedback via console/UI, 
-                // BUT the user explicitly asked: "등록되면 완료라고 띄우고" -> So I will use alert or a visible text.
-                // Given the flow, alert might be intrusive but it's exactly what was asked.
-                // Let's use a small timeout to ensure UI renders first.
-                setTimeout(() => alert("사진 등록이 완료되었습니다."), 100);
-
             } catch (e) {
                 console.error("Photo error:", e);
-                // 3. Failure Alert with Reason
-                alert(`사진 등록 실패!\n이유: ${e.message}`);
+                alert(`사진 추가 실패: ${e.message}`);
             } finally {
-                // 4. Restore UI
+                // Restore UI
                 addBtn.disabled = false;
                 addBtn.innerHTML = originalAddBtnText;
                 addBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-
                 input.value = "";
                 updateSubmitButton();
             }
@@ -229,12 +211,14 @@
                 div.className = "flex items-center bg-white border p-2 rounded-lg shadow-sm";
                 const url = URL.createObjectURL(img.blob);
                 div.innerHTML = `
-                    <img src="${url}" class="w-12 h-12 object-cover rounded mr-3">
+                    <div class="relative w-12 h-12 mr-3">
+                        <img src="${url}" class="w-full h-full object-cover rounded border">
+                    </div>
                     <div class="flex-1">
                         <p class="text-sm font-bold text-gray-800">${img.loc}</p>
                         <p class="text-[10px] text-gray-500">${img.ref === 'A4' ? 'A4 용지' : '신용카드'}</p>
                     </div>
-                    <button type="button" onclick="removePhoto(${idx})" class="text-red-500 p-2">
+                    <button type="button" onclick="removePhoto(${idx})" class="text-red-500 p-2 hover:bg-red-50 rounded">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                 `;
@@ -268,39 +252,28 @@
                             const canvas = document.createElement('canvas');
                             const MAX = 1600;
                             let w = img.width, h = img.height;
-
-                            if (w === 0 || h === 0) {
-                                reject(new Error("이미지 크기를 읽을 수 없습니다."));
-                                return;
-                            }
-
                             if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
                             else { if (h > MAX) { w *= MAX / h; h = MAX; } }
-
                             canvas.width = w; canvas.height = h;
                             const ctx = canvas.getContext('2d');
                             ctx.drawImage(img, 0, 0, w, h);
 
                             canvas.toBlob((blob) => {
-                                if (!blob) {
-                                    reject(new Error("이미지 압축에 실패했습니다."));
-                                    return;
-                                }
-                                resolve(blob);
+                                if (blob) resolve(blob);
+                                else reject(new Error("압축 실패"));
                             }, 'image/jpeg', 0.8);
                         } catch (err) {
-                            reject(new Error("이미지 변환 중 오류: " + err.message));
+                            reject(new Error("압축 중 오류"));
                         }
                     };
-                    img.onerror = () => reject(new Error("이미지 파일을 읽을 수 없습니다. 손상된 파일일 수 있습니다."));
+                    img.onerror = () => reject(new Error("이미지(file) 로드 실패: 올바른 이미지 파일이 아닙니다."));
                     img.src = e.target.result;
                 };
-                reader.onerror = () => reject(new Error("파일 읽기 실패."));
+                reader.onerror = () => reject(new Error("파일 읽기 실패"));
                 reader.readAsDataURL(file);
             });
         }
 
-        // Phone mask
         document.getElementById('phoneInput').addEventListener('input', function (e) {
             let val = e.target.value.replace(/\D/g, '');
             if (val.length > 3 && val.length <= 7) val = val.slice(0, 3) + '-' + val.slice(3);
@@ -321,54 +294,78 @@
             const originalText = btn.innerText;
 
             if (window.imagesQueue.length === 0) {
-                alert("추가된 사진이 없습니다.");
+                alert("사진을 최소 1장 이상 등록해주세요.");
+                return;
+            }
+
+            if (!e.target.name.value.trim() || !e.target.phone.value.trim()) {
+                alert("이름과 연락처를 입력해주세요.");
                 return;
             }
 
             try {
+                // UI: Processing
                 btn.disabled = true;
-                btn.innerHTML = '<span class="pulse-text">서버 전송 중...</span>';
+                btn.innerText = "접수 정보 저장 중...";
+                btn.classList.add('animate-pulse');
 
                 const name = e.target.name.value;
                 const phone = e.target.phone.value;
 
-                console.log("Submit start:", { name, phone });
-
                 // 1. Submit Request
                 const requestId = await client.mutation("requests:submit", { name, phone });
-                console.log("Request created:", requestId);
 
                 // 2. Upload Images
                 for (let i = 0; i < window.imagesQueue.length; i++) {
                     const img = window.imagesQueue[i];
-                    btn.innerText = `업로드 중 (${i + 1}/${window.imagesQueue.length})`;
+                    const progress = `이미지 업로드 중 (${i + 1}/${window.imagesQueue.length})`;
+                    console.log(progress);
+                    btn.innerText = progress;
 
+                    // Get URL
                     const uploadUrl = await client.mutation("images:generateUploadUrl");
+
+                    // Upload
                     const response = await fetch(uploadUrl, {
                         method: "POST",
                         headers: { "Content-Type": "image/jpeg" },
                         body: img.blob
                     });
 
-                    if (!response.ok) throw new Error(`${i + 1}번째 이미지 업로드 실패: ${response.statusText}`);
+                    if (!response.ok) {
+                        throw new Error(`이미지(${i + 1}) 전송 실패: ${response.status} ${response.statusText}`);
+                    }
 
                     const { storageId } = await response.json();
-                    console.log("Image uploaded to storage:", storageId);
 
+                    // Save Metadata
                     await client.mutation("images:saveImage", {
                         requestId, storageId, location: img.loc, refType: img.ref
                     });
                 }
 
+                // Success
                 alert("접수가 정상적으로 완료되었습니다!");
+
+                // Clear & Show Success Screen
+                document.getElementById('uploadForm').reset();
+                window.imagesQueue = [];
                 document.getElementById('uploadForm').classList.add('hidden');
                 document.getElementById('successMessage').classList.remove('hidden');
 
             } catch (err) {
-                console.error("Submission Error:", err);
-                alert("접수 실패: " + err.message + "\n\n개발자 도구(F12) 콘솔에서 상세 내용을 확인해주세요.");
+                console.error("Submission Error Details:", err);
+
+                let msg = "접수 중 오류가 발생했습니다.\n\n";
+                if (err.message.includes("fetch")) msg += "네트워크 연결 상태를 확인해주세요.";
+                else msg += `이유: ${err.message}`;
+
+                alert(msg);
+
+                // Restore Button
                 btn.disabled = false;
-                btn.innerText = originalText;
+                btn.innerText = "다시 접수하기";
+                btn.classList.remove('animate-pulse');
             }
         });
     </script>
