@@ -134,7 +134,6 @@
         </div>
     </div>
 
-    <!-- UI Logic Script (Non-Module for Immediate Access) -->
     <script>
         window.imagesQueue = [];
 
@@ -158,38 +157,28 @@
         window.handleAddPhoto = async function (input) {
             if (!input.files || !input.files[0]) return;
             const file = input.files[0];
+            const btn = document.querySelector('button[onclick*="fileInput"]');
+            const originalText = btn.innerHTML;
 
-            const addBtn = document.querySelector('button[onclick*="fileInput"]');
-            const originalAddBtnText = addBtn.innerHTML;
-
-            // 1. Show Loading State
-            addBtn.disabled = true;
-            addBtn.innerHTML = "⏳ 처리 중...";
-            addBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            btn.disabled = true;
+            btn.innerHTML = "⏳ 처리 중...";
 
             try {
                 let loc = document.getElementById('curLocation').value;
                 if (loc === '직접입력') loc = document.getElementById('curLocationEtc').value || '기타';
                 const ref = document.getElementById('globalRef').value;
 
-                if (!file.type.startsWith('image/')) {
-                    throw new Error("이미지 파일만 선택 가능합니다.");
-                }
-
                 const blob = await compressImage(file);
                 window.imagesQueue.push({ blob, loc, ref });
                 renderQueue();
-
-            } catch (e) {
-                console.error("Photo error:", e);
-                alert(`사진 추가 실패: ${e.message}`);
-            } finally {
-                // Restore UI
-                addBtn.disabled = false;
-                addBtn.innerHTML = originalAddBtnText;
-                addBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                input.value = "";
                 updateSubmitButton();
+            } catch (e) {
+                console.error(e);
+                alert("사진 등록 실패: " + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                input.value = "";
             }
         };
 
@@ -208,17 +197,15 @@
             list.innerHTML = "";
             window.imagesQueue.forEach((img, idx) => {
                 const div = document.createElement('div');
-                div.className = "flex items-center bg-white border p-2 rounded-lg shadow-sm";
+                div.className = "flex items-center bg-white border p-2 rounded-lg shadow-sm mb-2";
                 const url = URL.createObjectURL(img.blob);
                 div.innerHTML = `
-                    <div class="relative w-12 h-12 mr-3">
-                        <img src="${url}" class="w-full h-full object-cover rounded border">
-                    </div>
+                    <img src="${url}" class="w-12 h-12 object-cover rounded mr-3">
                     <div class="flex-1">
                         <p class="text-sm font-bold text-gray-800">${img.loc}</p>
                         <p class="text-[10px] text-gray-500">${img.ref === 'A4' ? 'A4 용지' : '신용카드'}</p>
                     </div>
-                    <button type="button" onclick="removePhoto(${idx})" class="text-red-500 p-2 hover:bg-red-50 rounded">
+                    <button type="button" onclick="removePhoto(${idx})" class="text-red-500 p-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                 `;
@@ -231,13 +218,11 @@
             const count = window.imagesQueue.length;
             if (count > 0) {
                 btn.disabled = false;
-                btn.classList.remove('bg-gray-400', 'cursor-not-allowed');
-                btn.classList.add('bg-green-600', 'hover:bg-green-700');
+                btn.className = "w-full py-3 px-4 rounded-lg shadow text-sm font-bold text-white bg-green-600 hover:bg-green-700 transition-colors";
                 btn.innerText = `최종 접수하기 (${count}개)`;
             } else {
                 btn.disabled = true;
-                btn.classList.add('bg-gray-400', 'cursor-not-allowed');
-                btn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                btn.className = "w-full py-3 px-4 rounded-lg shadow text-sm font-bold text-white bg-gray-400 cursor-not-allowed";
                 btn.innerText = "최종 접수하기 (0개)";
             }
         }
@@ -248,25 +233,16 @@
                 reader.onload = (e) => {
                     const img = new Image();
                     img.onload = () => {
-                        try {
-                            const canvas = document.createElement('canvas');
-                            const MAX = 1600;
-                            let w = img.width, h = img.height;
-                            if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
-                            else { if (h > MAX) { w *= MAX / h; h = MAX; } }
-                            canvas.width = w; canvas.height = h;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0, w, h);
-
-                            canvas.toBlob((blob) => {
-                                if (blob) resolve(blob);
-                                else reject(new Error("압축 실패"));
-                            }, 'image/jpeg', 0.8);
-                        } catch (err) {
-                            reject(new Error("압축 중 오류"));
-                        }
+                        const canvas = document.createElement('canvas');
+                        const MAX = 1600;
+                        let w = img.width, h = img.height;
+                        if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
+                        else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+                        canvas.width = w; canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        canvas.toBlob(resolve, 'image/jpeg', 0.8);
                     };
-                    img.onerror = () => reject(new Error("이미지(file) 로드 실패: 올바른 이미지 파일이 아닙니다."));
+                    img.onerror = () => reject(new Error("이미지 로드 실패"));
                     img.src = e.target.result;
                 };
                 reader.onerror = () => reject(new Error("파일 읽기 실패"));
@@ -282,102 +258,55 @@
         });
     </script>
 
-    <!-- Backend Logic Script (Module) -->
     <script type="module">
         import { ConvexClient } from "https://cdn.jsdelivr.net/npm/convex@1.11.0/dist/browser/index.js";
         const CONVEX_URL = "https://adventurous-barracuda-87.convex.cloud";
         const client = new ConvexClient(CONVEX_URL);
 
-        // Expose submit handler globally
-        window.handleFormSubmit = async function (e) {
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('submitBtn');
             const originalText = btn.innerText;
 
-            if (window.imagesQueue.length === 0) {
-                alert("사진을 최소 1장 이상 등록해주세요.");
-                return;
-            }
-
-            const name = document.querySelector('input[name="name"]').value;
-            const phone = document.getElementById('phoneInput').value;
-
-            if (!name.trim() || !phone.trim()) {
-                alert("이름과 연락처를 입력해주세요.");
-                return;
-            }
+            if (window.imagesQueue.length === 0) return;
 
             try {
-                // UI: Processing
                 btn.disabled = true;
-                btn.innerText = "접수 정보 저장 중...";
-                btn.classList.add('animate-pulse');
+                btn.innerHTML = '<span class="pulse-text">접수 중...</span>';
 
-                console.log("Submitting request...", { name, phone });
+                const name = e.target.name.value;
+                const phone = e.target.phone.value;
 
-                // 1. Submit Request
                 const requestId = await client.mutation("requests:submit", { name, phone });
-                console.log("Request created:", requestId);
 
-                // 2. Upload Images
                 for (let i = 0; i < window.imagesQueue.length; i++) {
                     const img = window.imagesQueue[i];
-                    const progress = `이미지 업로드 중 (${i + 1}/${window.imagesQueue.length})`;
-                    console.log(progress);
-                    btn.innerText = progress;
+                    btn.innerText = `업로드 중 (${i + 1}/${window.imagesQueue.length})`;
 
-                    // Get URL
                     const uploadUrl = await client.mutation("images:generateUploadUrl");
-
-                    // Upload
                     const response = await fetch(uploadUrl, {
                         method: "POST",
                         headers: { "Content-Type": "image/jpeg" },
                         body: img.blob
                     });
-
-                    if (!response.ok) {
-                        throw new Error(`이미지(${i + 1}) 전송 실패: ${response.status}`);
-                    }
-
                     const { storageId } = await response.json();
 
-                    // Save Metadata
                     await client.mutation("images:saveImage", {
                         requestId, storageId, location: img.loc, refType: img.ref
                     });
                 }
 
-                // Success
-                btn.innerText = "접수 완료!";
                 alert("접수가 정상적으로 완료되었습니다!");
-
-                // Clear & Show Success Screen
-                document.getElementById('uploadForm').reset();
-                window.imagesQueue = [];
                 document.getElementById('uploadForm').classList.add('hidden');
                 document.getElementById('successMessage').classList.remove('hidden');
 
             } catch (err) {
-                console.error("Submission Error Details:", err);
-
-                let msg = "접수 중 오류가 발생했습니다.\n\n";
-                if (err.message.includes("failed to fetch")) msg += "원인: 인터넷 연결 상태를 확인해주세요.";
-                else msg += `원인: ${err.message}`;
-
-                alert(msg);
-
-                // Restore Button
+                console.error(err);
+                alert("접수 실패: " + err.message);
                 btn.disabled = false;
-                btn.innerText = "다시 접수하기";
-                btn.classList.remove('animate-pulse');
+                btn.innerText = originalText;
             }
-        };
-
-        // Attach listener using the global function
-        const form = document.getElementById('uploadForm');
-        form.removeEventListener('submit', window.handleFormSubmit); // Clean up old listeners just in case
-        form.addEventListener('submit', window.handleFormSubmit);
+        });
     </script>
 </body>
 
