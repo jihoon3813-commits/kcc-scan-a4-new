@@ -251,7 +251,8 @@
 
         function updatePhotos() {
             var list = document.getElementById('photoList');
-            document.getElementById('emptyText').classList.add('hidden');
+            var empty = document.getElementById('emptyText');
+            if (empty) empty.classList.add('hidden');
             list.innerHTML = "";
             PHOTOS.forEach(function (it, i) {
                 var d = document.createElement('div');
