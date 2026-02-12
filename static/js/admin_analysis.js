@@ -19,8 +19,8 @@ let currentRefType = 'A4';
 let currentImages = [];
 let selectedImageId = null;
 
-const CONVEX_URL = "https://adventurous-barracuda-87.convex.cloud";
-const SITE_URL = "https://adventurous-barracuda-87.convex.site";
+const CONVEX_URL = "https://benevolent-kudu-521.convex.cloud";
+const SITE_URL = "https://benevolent-kudu-521.convex.site";
 let convexClient;
 let HTTP_MODE = false;
 
