@@ -150,11 +150,12 @@ async function deleteRequest(id, e) {
 
     try {
         if (HTTP_MODE) {
-            await fetch(`${SITE_URL}/delete`, {
+            const res = await fetch(`${SITE_URL}/delete`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ requestId: id })
             });
+            if (!res.ok) throw new Error("Server returned error during delete");
         } else {
             await convexClient.mutation("requests:remove", { requestId: id });
         }
