@@ -81,13 +81,13 @@
 
         <!-- Brand Header -->
         <div class="bg-blue-600 p-8 text-center text-white">
-            <div class="flex items-center justify-center gap-2 mb-2">
-                <img src="https://cdn.imweb.me/upload/S20250904697320f4fd9ed/e840c9a46f66a.png" alt="KCC" class="h-6">
-                <span class="text-sm font-bold opacity-80">Homecc</span>
+            <div class="mb-4">
+                <img src="https://cdn.imweb.me/upload/S20250904697320f4fd9ed/e840c9a46f66a.png" alt="KCC Homecc"
+                    class="h-10 mx-auto">
             </div>
             <h1 class="text-3xl font-black italic tracking-tighter uppercase leading-none mb-1">SMART SCAN</h1>
-            <p class="text-[10px] font-bold text-blue-100 uppercase tracking-widest opacity-60">Smart Window Measurement
-            </p>
+            <p class="text-[10px] font-bold text-blue-100 uppercase tracking-widest opacity-60 italic">KCC Homecc Smart
+                Measurement</p>
         </div>
 
         <div id="ui-body" class="p-8 space-y-8">
@@ -150,7 +150,7 @@
         <!-- Success Screen -->
         <div id="ui-done" class="hidden p-20 text-center flex flex-col items-center">
             <div class="text-8xl mb-6">🎯</div>
-            <h2 class="text-3xl font-black text-gray-950 mb-3 tracking-tighter uppercase">접수 완료!</h2>
+            <h2 class="text-3xl font-black text-gray-950 mb-3 tracking-tighter uppercase leading-tight">접수 완료!</h2>
             <p class="text-gray-500 mb-10 font-bold leading-relaxed">데이터가 성공적으로 전송되었습니다.<br>금방 연락드릴게요!</p>
             <button onclick="location.reload()" class="px-8 py-4 bg-gray-100 rounded-2xl font-bold text-gray-600">추가
                 접수하기</button>
@@ -163,6 +163,7 @@
         var CURRENT_REF = 'A4';
         window.CONVEX_CLIENT = null;
         window.PENDING_SUBMIT = false;
+        var CONVEX_URL = "https://adventurous-barracuda-87.convex.cloud";
 
         // Auto Hyphen Phone Input
         document.getElementById('phoneInp').addEventListener('input', function (e) {
@@ -223,21 +224,78 @@
 
         function delImg(i) { PHOTOS.splice(i, 1); if (PHOTOS.length === 0) location.reload(); else updatePhotos(); }
 
-        // Start Submit Flow
-        window.requestSubmit = function () {
+        // Start Submit Flow (Universal)
+        window.requestSubmit = async function () {
             var n = document.getElementById('nameInp').value.trim();
             var p = document.getElementById('phoneInp').value.trim();
+            var b = document.getElementById('subBtn');
+
             if (!n || !p) return alert("성함과 연락처를 입력해 주세요.");
             if (PHOTOS.length === 0) return alert("사진을 최소 1장 이상 등록해 주세요.");
 
-            if (!window.CONVEX_CLIENT) {
-                window.PENDING_SUBMIT = true;
-                var b = document.getElementById('subBtn');
-                b.disabled = true;
-                b.innerHTML = '<span class="pulse text-blue-400 font-black">🔄 전송 준비 중 (자동 진행)...</span>';
-                return;
+            b.disabled = true;
+            b.innerHTML = '<span class="pulse font-black text-blue-300 italic">� 데이터 전송 중...</span>';
+
+            try {
+                // Determine if we use the Client or direct Fallback
+                if (window.CONVEX_CLIENT) {
+                    await submitViaClient(window.CONVEX_CLIENT, n, p, b);
+                } else {
+                    await submitViaFallback(n, p, b);
+                }
+                document.getElementById('ui-body').classList.add('hidden');
+                document.getElementById('ui-done').classList.remove('hidden');
+            } catch (err) {
+                alert("전송 중 오류: " + err.message);
+                b.disabled = false;
+                b.innerText = "최종 접수 완료하기";
             }
         };
+
+        // Standard Client Submission
+        async function submitViaClient(client, n, p, b) {
+            var reqId = await client.mutation("requests:submit", { name: n, phone: p });
+            for (var i = 0; i < PHOTOS.length; i++) {
+                updateSubMsg(b, i, PHOTOS.length);
+                var url = await client.mutation("images:generateUploadUrl");
+                var res = await fetch(url, { method: "POST", body: PHOTOS[i].blob });
+                var data = await res.json();
+                await client.mutation("images:saveImage", { requestId: reqId, storageId: data.storageId, location: PHOTOS[i].loc, refType: PHOTOS[i].ref });
+            }
+        }
+
+        // Direct Fetch Submission (Zero Dependency Fallback)
+        async function submitViaFallback(n, p, b) {
+            const siteUrl = CONVEX_URL.replace(".cloud", ".site");
+            const res = await fetch(`${siteUrl}/submit`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: n, phone: p })
+            });
+            const { requestId } = await res.json();
+
+            // For images with fallback, we still need generateUploadUrl or direct storage access.
+            // Simplified fallback for now: Submit images sequentially via individual site actions if needed.
+            // But usually if fetch works, the client should have worked. 
+            // In case only Library is blocked, we can use client-less upload.
+            for (var i = 0; i < PHOTOS.length; i++) {
+                updateSubMsg(b, i, PHOTOS.length);
+                // Implementation of simplified image upload via HTTP if library is truly dead
+                const uploadUrlRes = await fetch(`${siteUrl}/generateUploadUrl`, { method: "POST" });
+                const uploadUrl = (await uploadUrlRes.json()).url;
+                const uploadRes = await fetch(uploadUrl, { method: "POST", body: PHOTOS[i].blob });
+                const { storageId } = await uploadRes.json();
+                await fetch(`${siteUrl}/saveImage`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ requestId, storageId, location: PHOTOS[i].loc, refType: PHOTOS[i].ref })
+                });
+            }
+        }
+
+        function updateSubMsg(b, i, total) {
+            b.innerText = `사진 전송 중 (${i + 1}/${total})`;
+        }
 
         window.onload = function () {
             var p = new URLSearchParams(window.location.search);
@@ -247,7 +305,7 @@
                 document.getElementById('phoneInp').dispatchEvent(new Event('input'));
             }
             if (window.location.search) window.history.replaceState({}, '', window.location.pathname);
-            loadConvex(); // Start loading backend instantly
+            loadConvex();
         };
 
         // --- Bulletproof Convex Loader ---
@@ -270,53 +328,20 @@
             for (let src of sources) {
                 try {
                     const { ConvexClient } = await import(src);
-                    const client = new ConvexClient("https://adventurous-barracuda-87.convex.cloud");
-
-                    // Final submission handler
-                    const realSubmit = async function () {
-                        var n = document.getElementById('nameInp').value.trim();
-                        var p = document.getElementById('phoneInp').value.trim();
-                        var b = document.getElementById('subBtn');
-                        b.disabled = true;
-                        b.innerHTML = '<span class="pulse font-black text-blue-300 italic">📊 데이터 전송 중...</span>';
-                        try {
-                            var reqId = await client.mutation("requests:submit", { name: n, phone: p });
-                            for (var i = 0; i < PHOTOS.length; i++) {
-                                var it = PHOTOS[i];
-                                b.innerText = "데이터 전송 중 (" + (i + 1) + "/" + PHOTOS.length + ")";
-                                var url = await client.mutation("images:generateUploadUrl");
-                                var res = await fetch(url, { method: "POST", body: it.blob });
-                                var data = await res.json();
-                                await client.mutation("images:saveImage", { requestId: reqId, storageId: data.storageId, location: it.loc, refType: it.ref });
-                            }
-                            document.getElementById('ui-body').classList.add('hidden');
-                            document.getElementById('ui-done').classList.remove('hidden');
-                        } catch (err) {
-                            alert("오류: " + err.message);
-                            b.disabled = false;
-                            b.innerText = "최종 접수 완료하기";
-                        }
-                    };
-
-                    window.CONVEX_CLIENT = client;
-                    window.requestSubmit = realSubmit;
-
+                    window.CONVEX_CLIENT = new ConvexClient("https://adventurous-barracuda-87.convex.cloud");
                     statusTxt.innerText = "ONLINE";
                     statusDot.className = "w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]";
                     statusDot.classList.remove('pulse');
-
-                    if (window.PENDING_SUBMIT) realSubmit();
                     return;
                 } catch (e) {
-                    console.warn(`Source ${src} failed, retrying...`);
+                    console.warn(`Source ${src} failed...`);
                 }
             }
 
-            // All sources failed
-            statusTxt.innerText = "ERROR";
-            statusDot.className = "w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]";
+            // All library sources failed: Enter Fallback Mode
+            statusTxt.innerText = "FALLBACK";
+            statusDot.className = "w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]";
             statusDot.classList.remove('pulse');
-            retryBtn.classList.remove('hidden');
         }
     </script>
 </body>
