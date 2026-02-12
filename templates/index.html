@@ -31,12 +31,17 @@
             }
         }
 
-        .btn-active {
+        .btn-blue {
             background: #2563eb;
             color: white;
             border-radius: 1.25rem;
             font-weight: 900;
             box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+            transition: all 0.2s;
+        }
+
+        .btn-blue:active {
+            transform: scale(0.97);
         }
 
         .ref-card {
@@ -48,6 +53,7 @@
             color: #64748b;
             transition: all 0.2s;
             cursor: pointer;
+            text-align: center;
         }
 
         .ref-card.active {
@@ -63,38 +69,42 @@
 
     <div
         class="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl border border-gray-100 pb-8 relative overflow-hidden">
-        <!-- Status Indicator -->
+        <!-- Backend Status Bar -->
         <div class="absolute top-6 right-8 flex items-center gap-2 z-10">
             <span id="statusTxt"
-                class="text-[10px] font-black text-gray-400 uppercase tracking-widest">CONNECTING</span>
+                class="text-[9px] font-black text-gray-400 uppercase tracking-tighter">Connecting</span>
             <div id="statusDot"
-                class="w-2.5 h-2.5 rounded-full bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,0.6)] pulse"></div>
+                class="w-2.5 h-2.5 rounded-full bg-orange-400 pulse shadow-[0_0_8px_rgba(251,146,60,0.4)]"></div>
+            <button id="retryBtn" onclick="loadConvex()"
+                class="hidden ml-1 text-[9px] font-black text-blue-500 border-b border-blue-200">재연결</button>
         </div>
 
-        <!-- Header -->
-        <div class="bg-blue-600 p-8 text-center text-white relative">
-            <img src="https://cdn.imweb.me/upload/S20250904697320f4fd9ed/e840c9a46f66a.png" alt="Logo"
-                class="h-10 mx-auto mb-3">
-            <h1 class="text-2xl font-black italic tracking-tighter uppercase leading-none">SMART SCAN</h1>
-            <p class="text-blue-100 text-[10px] font-bold mt-2 tracking-widest uppercase opacity-80">KCC Homecc Smart
-                Measurement</p>
+        <!-- Brand Header -->
+        <div class="bg-blue-600 p-8 text-center text-white">
+            <div class="flex items-center justify-center gap-2 mb-2">
+                <img src="https://cdn.imweb.me/upload/S20250904697320f4fd9ed/e840c9a46f66a.png" alt="KCC" class="h-6">
+                <span class="text-sm font-bold opacity-80">Homecc</span>
+            </div>
+            <h1 class="text-3xl font-black italic tracking-tighter uppercase leading-none mb-1">SMART SCAN</h1>
+            <p class="text-[10px] font-bold text-blue-100 uppercase tracking-widest opacity-60">Smart Window Measurement
+            </p>
         </div>
 
         <div id="ui-body" class="p-8 space-y-8">
-            <!-- 1. Customer Info -->
+            <!-- 1. Info Inputs -->
             <div class="space-y-4">
                 <input type="text" id="nameInp" placeholder="성함 (예: 홍길동)"
-                    class="w-full bg-gray-50 border-gray-100 rounded-2xl p-4 border focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none transition-all font-bold text-lg">
+                    class="w-full bg-gray-50 border-gray-100 rounded-2xl p-4 border focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none transition-all font-black text-lg">
                 <input type="tel" id="phoneInp" inputmode="tel" placeholder="연락처 (010-0000-0000)" maxlength="13"
-                    class="w-full bg-gray-50 border-gray-100 rounded-2xl p-4 border focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none transition-all font-bold text-lg">
+                    class="w-full bg-gray-50 border-gray-100 rounded-2xl p-4 border focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none transition-all font-black text-lg">
             </div>
 
-            <!-- 2. Step 1 -->
+            <!-- 2. Step 1: Reference Object -->
             <div class="space-y-4">
-                <p class="text-[11px] font-black text-blue-500 uppercase tracking-widest pl-1">STEP 1. 기준물체 선택</p>
+                <p class="text-[11px] font-black text-blue-600 uppercase tracking-widest pl-1">STEP 1. 기준물체 선택</p>
                 <div class="flex gap-3">
-                    <div id="cardA4" onclick="setRef('A4')" class="ref-card flex-1 text-center active">A4 용지</div>
-                    <div id="cardCard" onclick="setRef('CREDIT_CARD')" class="ref-card flex-1 text-center">신용카드</div>
+                    <div id="cardA4" onclick="setRef('A4')" class="ref-card flex-1 active">A4 용지</div>
+                    <div id="cardCard" onclick="setRef('CREDIT_CARD')" class="ref-card flex-1">신용카드</div>
                 </div>
                 <div class="bg-gray-50 p-2 rounded-2xl border border-gray-100 shadow-inner">
                     <img src="https://cdn.imweb.me/upload/S20250904697320f4fd9ed/6ae0c52001c90.jpeg"
@@ -102,17 +112,17 @@
                 </div>
             </div>
 
-            <!-- 3. Step 2 -->
+            <!-- 3. Step 2: Photo List -->
             <div class="space-y-4">
-                <p class="text-[11px] font-black text-blue-500 uppercase tracking-widest pl-1">STEP 2. 촬영된 사진 목록</p>
+                <p class="text-[11px] font-black text-blue-600 uppercase tracking-widest pl-1">STEP 2. 촬영된 사진 목록</p>
                 <div id="photoList"
-                    class="min-h-[100px] bg-slate-50 border-2 border-dashed border-gray-200 rounded-[2rem] p-5 flex flex-col gap-4 justify-center">
+                    class="min-h-[120px] bg-slate-50 border-2 border-dashed border-gray-200 rounded-[2rem] p-5 flex flex-col gap-4 justify-center shadow-inner">
                     <p id="emptyText" class="text-xs text-gray-400 text-center font-bold">등록된 사진이 없습니다.</p>
                 </div>
             </div>
 
-            <!-- 4. Controller -->
-            <div class="bg-blue-50 p-6 rounded-[2.5rem] border border-blue-100 space-y-4 shadow-sm">
+            <!-- 4. Location & Trigger -->
+            <div class="bg-blue-50 p-6 rounded-[2.5rem] border border-blue-100 space-y-4 shadow-sm relative">
                 <select id="locSel"
                     class="w-full bg-white border-blue-100 rounded-xl p-4 font-black text-blue-900 shadow-sm outline-none appearance-none cursor-pointer">
                     <option value="거실">거실</option>
@@ -124,37 +134,37 @@
                     <option value="작은방2">작은방2</option>
                 </select>
                 <button type="button" id="camBtn" onclick="document.getElementById('fileHidden').click()"
-                    class="btn-active w-full py-5 text-xl flex items-center justify-center gap-2 active:scale-[0.97] transition-transform">
-                    <span>촬영 / 등록하기</span>
+                    class="btn-blue w-full py-5 text-xl flex items-center justify-center gap-2">
+                    <span>📸 사진 촬영 / 등록</span>
                 </button>
                 <input type="file" id="fileHidden" accept="image/*" class="hidden" onchange="imgReady(this)">
             </div>
 
-            <!-- 5. Submit -->
+            <!-- 5. Submit Button -->
             <button type="button" id="subBtn" onclick="requestSubmit()"
-                class="w-full py-6 bg-gray-950 text-white rounded-3xl font-black text-xl shadow-2xl hover:bg-black active:scale-[0.98] transition-all">
+                class="w-full py-6 bg-gray-950 text-white rounded-3xl font-black text-xl shadow-2xl hover:bg-black transition-all">
                 최종 접수 완료하기
             </button>
         </div>
 
         <!-- Success Screen -->
-        <div id="ui-done" class="hidden p-20 text-center">
+        <div id="ui-done" class="hidden p-20 text-center flex flex-col items-center">
             <div class="text-8xl mb-6">🎯</div>
             <h2 class="text-3xl font-black text-gray-950 mb-3 tracking-tighter uppercase">접수 완료!</h2>
-            <p class="text-gray-500 mb-10 font-bold">성공적으로 전송되었습니다.<br>금방 연락드릴게요!</p>
-            <button onclick="location.reload()" class="w-full py-4 bg-gray-100 rounded-2xl font-bold text-gray-600">추가
-                등록하기</button>
+            <p class="text-gray-500 mb-10 font-bold leading-relaxed">데이터가 성공적으로 전송되었습니다.<br>금방 연락드릴게요!</p>
+            <button onclick="location.reload()" class="px-8 py-4 bg-gray-100 rounded-2xl font-bold text-gray-600">추가
+                접수하기</button>
         </div>
     </div>
 
-    <!-- UI/UX Logic (Global & Fast) -->
+    <!-- Logic Engine -->
     <script>
         var PHOTOS = [];
         var CURRENT_REF = 'A4';
         window.CONVEX_CLIENT = null;
-        window.PENDING_CLICK = false;
+        window.PENDING_SUBMIT = false;
 
-        // Auto Hyphen
+        // Auto Hyphen Phone Input
         document.getElementById('phoneInp').addEventListener('input', function (e) {
             var v = e.target.value.replace(/\D/g, '');
             if (v.length <= 3) e.target.value = v;
@@ -162,16 +172,18 @@
             else e.target.value = v.slice(0, 3) + '-' + v.slice(3, 7) + '-' + v.slice(7, 11);
         });
 
+        // Set Reference Object Type
         function setRef(t) {
             CURRENT_REF = t;
             document.getElementById('cardA4').classList.toggle('active', t === 'A4');
             document.getElementById('cardCard').classList.toggle('active', t === 'CREDIT_CARD');
         }
 
+        // Image Processing & Compression
         async function imgReady(inp) {
             var f = inp.files[0]; if (!f) return;
             var b = document.getElementById('camBtn');
-            var old = b.innerText; b.innerText = "⏳ 사진 처리 중..."; b.disabled = true;
+            var old = b.innerText; b.innerText = "⏳ 압축 처리 중..."; b.disabled = true;
             try {
                 var blob = await new Promise(function (res) {
                     var r = new FileReader();
@@ -195,36 +207,36 @@
             } finally { b.innerText = old; b.disabled = false; inp.value = ""; }
         }
 
+        // Update UI Photo List
         function updatePhotos() {
             var list = document.getElementById('photoList');
             document.getElementById('emptyText').classList.add('hidden');
             list.innerHTML = "";
             PHOTOS.forEach(function (it, i) {
                 var d = document.createElement('div');
-                d.className = "flex items-center justify-between bg-white border border-gray-100 p-3 rounded-2xl shadow-sm mb-3";
+                d.className = "flex items-center justify-between bg-white border border-gray-100 p-3 rounded-2xl shadow-sm mb-2";
                 var u = URL.createObjectURL(it.blob);
-                d.innerHTML = '<div class="flex items-center gap-4"><img src="' + u + '" class="w-16 h-16 object-cover rounded-xl border-2 border-slate-50 shadow-inner"><div><p class="text-sm font-black text-gray-800">' + it.loc + '</p><p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest">' + it.ref + '</p></div></div><button onclick="delImg(' + i + ')" class="w-10 h-10 text-gray-300 hover:text-red-500 font-bold">✕</button>';
+                d.innerHTML = '<div class="flex items-center gap-4"><img src="' + u + '" class="w-16 h-16 object-cover rounded-xl border-2 border-slate-50 shadow-inner"><div><p class="text-sm font-black text-gray-800">' + it.loc + '</p><p class="text-[10px] font-bold text-blue-500 uppercase tracking-widest">' + it.ref + '</p></div></div><button onclick="delImg(' + i + ')" class="w-10 h-10 text-gray-300 hover:text-red-500 font-bold">✕</button>';
                 list.appendChild(d);
             });
         }
 
         function delImg(i) { PHOTOS.splice(i, 1); if (PHOTOS.length === 0) location.reload(); else updatePhotos(); }
 
-        // Smart Submit (No more alerts!)
+        // Start Submit Flow
         window.requestSubmit = function () {
             var n = document.getElementById('nameInp').value.trim();
             var p = document.getElementById('phoneInp').value.trim();
-            if (!n || !p) return alert("성함과 연락처를 먼저 입력해 주세요.");
+            if (!n || !p) return alert("성함과 연락처를 입력해 주세요.");
             if (PHOTOS.length === 0) return alert("사진을 최소 1장 이상 등록해 주세요.");
 
             if (!window.CONVEX_CLIENT) {
-                window.PENDING_CLICK = true;
+                window.PENDING_SUBMIT = true;
                 var b = document.getElementById('subBtn');
                 b.disabled = true;
-                b.innerHTML = '<span class="pulse text-blue-400 font-bold italic">🔄 전송 준비 중... (서버 연결 후 자동 진행)</span>';
+                b.innerHTML = '<span class="pulse text-blue-400 font-black">🔄 전송 준비 중 (자동 진행)...</span>';
                 return;
             }
-            // Real logic is replaced by the module script below
         };
 
         window.onload = function () {
@@ -235,67 +247,76 @@
                 document.getElementById('phoneInp').dispatchEvent(new Event('input'));
             }
             if (window.location.search) window.history.replaceState({}, '', window.location.pathname);
-
-            // Start loading Convex immediately
-            loadConvex();
+            loadConvex(); // Start loading backend instantly
         };
 
+        // --- Bulletproof Convex Loader ---
         async function loadConvex() {
-            const urls = [
+            var statusTxt = document.getElementById('statusTxt');
+            var statusDot = document.getElementById('statusDot');
+            var retryBtn = document.getElementById('retryBtn');
+
+            statusTxt.innerText = "CONNECTING";
+            statusDot.className = "w-2.5 h-2.5 rounded-full bg-orange-400 pulse shadow-[0_0_8px_rgba(251,146,60,0.6)]";
+            retryBtn.classList.add('hidden');
+
+            const sources = [
+                "https://esm.sh/convex@1.11.0?bundle",
                 "https://cdn.jsdelivr.net/npm/convex@1.11.0/dist/browser/index.js",
                 "https://unpkg.com/convex@1.11.0/dist/browser/index.js",
-                "https://esm.sh/convex@1.11.0?bundle"
+                "https://cdn.skypack.dev/convex@1.11.0?min"
             ];
 
-            for (let url of urls) {
+            for (let src of sources) {
                 try {
-                    const { ConvexClient } = await import(url);
-                    window.CONVEX_CLIENT = new ConvexClient("https://adventurous-barracuda-87.convex.cloud");
-                    initRealSubmit(window.CONVEX_CLIENT);
+                    const { ConvexClient } = await import(src);
+                    const client = new ConvexClient("https://adventurous-barracuda-87.convex.cloud");
+
+                    // Final submission handler
+                    const realSubmit = async function () {
+                        var n = document.getElementById('nameInp').value.trim();
+                        var p = document.getElementById('phoneInp').value.trim();
+                        var b = document.getElementById('subBtn');
+                        b.disabled = true;
+                        b.innerHTML = '<span class="pulse font-black text-blue-300 italic">📊 데이터 전송 중...</span>';
+                        try {
+                            var reqId = await client.mutation("requests:submit", { name: n, phone: p });
+                            for (var i = 0; i < PHOTOS.length; i++) {
+                                var it = PHOTOS[i];
+                                b.innerText = "데이터 전송 중 (" + (i + 1) + "/" + PHOTOS.length + ")";
+                                var url = await client.mutation("images:generateUploadUrl");
+                                var res = await fetch(url, { method: "POST", body: it.blob });
+                                var data = await res.json();
+                                await client.mutation("images:saveImage", { requestId: reqId, storageId: data.storageId, location: it.loc, refType: it.ref });
+                            }
+                            document.getElementById('ui-body').classList.add('hidden');
+                            document.getElementById('ui-done').classList.remove('hidden');
+                        } catch (err) {
+                            alert("오류: " + err.message);
+                            b.disabled = false;
+                            b.innerText = "최종 접수 완료하기";
+                        }
+                    };
+
+                    window.CONVEX_CLIENT = client;
+                    window.requestSubmit = realSubmit;
+
+                    statusTxt.innerText = "ONLINE";
+                    statusDot.className = "w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]";
+                    statusDot.classList.remove('pulse');
+
+                    if (window.PENDING_SUBMIT) realSubmit();
                     return;
                 } catch (e) {
-                    console.warn(`Failed to lead from ${url}, trying next...`);
+                    console.warn(`Source ${src} failed, retrying...`);
                 }
             }
-            document.getElementById('statusTxt').innerText = "ERROR";
-            document.getElementById('statusDot').className = "w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]";
-        }
 
-        function initRealSubmit(client) {
-            document.getElementById('statusTxt').innerText = "ONLINE";
-            document.getElementById('statusDot').className = "w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]";
-            document.getElementById('statusDot').classList.remove('pulse');
-
-            var originalRealSubmit = async function () {
-                var n = document.getElementById('nameInp').value.trim();
-                var p = document.getElementById('phoneInp').value.trim();
-                var b = document.getElementById('subBtn');
-
-                b.disabled = true;
-                b.innerHTML = '<span class="pulse font-black text-blue-300">📊 데이터 전송 중...</span>';
-
-                try {
-                    var reqId = await client.mutation("requests:submit", { name: n, phone: p });
-                    for (var i = 0; i < PHOTOS.length; i++) {
-                        var it = PHOTOS[i];
-                        b.innerText = "업로드 중 (" + (i + 1) + "/" + PHOTOS.length + ")";
-                        var url = await client.mutation("images:generateUploadUrl");
-                        var res = await fetch(url, { method: "POST", body: it.blob });
-                        var data = await res.json();
-                        await client.mutation("images:saveImage", { requestId: reqId, storageId: data.storageId, location: it.loc, refType: it.ref });
-                    }
-                    document.getElementById('ui-body').classList.add('hidden');
-                    document.getElementById('ui-done').classList.remove('hidden');
-                    alert("접수가 정상적으로 완료되었습니다!");
-                } catch (err) {
-                    alert("전송 중 오류 발생: " + err.message);
-                    b.disabled = false;
-                    b.innerText = "최종 접수 완료하기";
-                }
-            };
-
-            window.requestSubmit = originalRealSubmit;
-            if (window.PENDING_CLICK) originalRealSubmit();
+            // All sources failed
+            statusTxt.innerText = "ERROR";
+            statusDot.className = "w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]";
+            statusDot.classList.remove('pulse');
+            retryBtn.classList.remove('hidden');
         }
     </script>
 </body>
