@@ -271,7 +271,14 @@ async function autoDetect() {
     try {
         const data = await convexClient.action("images:analyzeImage", { imageId: selectedImageId });
         if (data.success && data.box) {
-            refBox = data.box;
+            // Convert rect to 4 points
+            const b = data.box;
+            refPoints = [
+                { x: b.x, y: b.y },
+                { x: b.x + b.w, y: b.y },
+                { x: b.x + b.w, y: b.y + b.h },
+                { x: b.x, y: b.y + b.h }
+            ];
             draw();
             hideLoading();
             alert("기준 물체가 감지되었습니다.");
@@ -370,7 +377,21 @@ function selectImage(id) {
         currentImage = img;
         resizeCanvas();
         fitImageToCanvas();
-        refPoints = null; measurePoints = null;
+
+        // Reset tool state for new image
+        refPoints = null;
+        measurePoints = null;
+        isRefLocked = false;
+        dragPointIndex = -1;
+        dragMeasureIndex = -1;
+        hideFloatingBtn();
+        setTool('select');
+
+        const lockBtn = document.getElementById('lockRefBtn');
+        if (lockBtn) {
+            lockBtn.innerText = 'UNLOCK';
+            lockBtn.classList.remove('text-blue-600', 'font-black');
+        }
 
         // Restore values from memory
         const v = imgData.localVals;
@@ -490,6 +511,7 @@ function onMouseDown(e) {
     isDragging = true;
     startPos = pos;
     dragPointIndex = -1;
+    dragMeasureIndex = -1;
 
     if (mode === 'ref') {
         if (isRefLocked && refPoints) return;
