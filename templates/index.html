@@ -3,18 +3,33 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>창문 사이즈 측정 접수</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap"
+        rel="stylesheet">
     <style>
         body {
             font-family: 'Noto Sans KR', sans-serif;
-            background-color: #f1f5f9;
+            background-color: #f8fafc;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .pulse {
-            animation: pulse 2s infinite;
+        .btn-active {
+            border-color: #2563eb;
+            background-color: #eff6ff;
+            color: #1d4ed8;
+            box-shadow: 0 0 0 3px #bfdbfe;
+        }
+
+        .btn-inactive {
+            border-color: #e2e8f0;
+            background-color: #ffffff;
+            color: #64748b;
+        }
+
+        .pulse-text {
+            animation: pulse 1.5s infinite;
         }
 
         @keyframes pulse {
@@ -25,65 +40,58 @@
             }
 
             50% {
-                opacity: 0.5;
+                opacity: 0.4;
             }
-        }
-
-        .main-card {
-            border-radius: 2.5rem;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
         }
     </style>
 </head>
 
-<body class="min-h-screen py-10 px-4 flex flex-col items-center">
+<body class="min-h-screen py-6 px-4 flex flex-col items-center">
 
-    <div class="max-w-md w-full bg-white main-card overflow-hidden border border-white">
-        <!-- Brand Header -->
-        <div class="bg-blue-600 p-8 text-center">
+    <div class="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-gray-100">
+        <!-- Header -->
+        <div class="bg-blue-600 p-8 text-center text-white">
             <img src="https://cdn.imweb.me/upload/S20250904697320f4fd9ed/e840c9a46f66a.png" alt="Logo"
-                class="h-10 mx-auto mb-3">
-            <h1 class="text-white text-2xl font-black italic tracking-tighter uppercase">KCC Homecc Smart Scan</h1>
-            <p class="text-blue-100 text-sm mt-1 font-bold">간편 촬영으로 창문 사이즈를 측정하세요</p>
+                class="h-10 mx-auto mb-2">
+            <h1 class="text-2xl font-black italic tracking-tighter">SMART SCAN</h1>
+            <p class="text-blue-100 text-xs font-bold mt-1">창문 사진을 찍어 바로 보내주세요</p>
         </div>
 
-        <div id="ui-form" class="p-8 space-y-8">
-            <!-- 1. Customer Info -->
-            <div class="space-y-4">
-                <input type="text" id="custName" placeholder="성함"
-                    class="w-full bg-gray-50 border-gray-100 rounded-2xl p-4 border focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none transition-all text-lg font-bold">
-                <input type="tel" id="custPhone" placeholder="휴대폰 번호 (- 없이 입력)" maxlength="13"
-                    class="w-full bg-gray-50 border-gray-100 rounded-2xl p-4 border focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none transition-all text-lg font-bold">
+        <div id="main-ui" class="p-7 space-y-7">
+            <!-- 1. Customer -->
+            <div class="space-y-3">
+                <input type="text" id="cust-name" placeholder="성함 (예: 홍길동)"
+                    class="w-full bg-gray-50 border-gray-200 rounded-2xl p-4 border focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none transition-all font-bold text-lg">
+                <input type="tel" id="cust-phone" inputmode="tel" placeholder="연락처 (자동 하이픈)" maxlength="13"
+                    class="w-full bg-gray-50 border-gray-200 rounded-2xl p-4 border focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none transition-all font-bold text-lg">
             </div>
 
-            <!-- 2. Ref Selection -->
+            <!-- 2. Step 1 -->
             <div class="space-y-4">
-                <p class="text-[11px] font-black text-gray-400 uppercase tracking-widest pl-1">STEP 1. 기준물체 선택</p>
+                <p class="text-[11px] font-black text-blue-500 uppercase tracking-widest pl-1">STEP 1. 기준물체 선택</p>
                 <div class="flex gap-3">
-                    <button type="button" id="ref-A4"
-                        class="flex-1 py-4 border-2 border-blue-500 rounded-2xl bg-blue-50 text-blue-700 font-black shadow-sm ring-4 ring-blue-50">A4
-                        용지</button>
-                    <button type="button" id="ref-CARD"
-                        class="flex-1 py-4 border-2 border-gray-100 rounded-2xl bg-white text-gray-400 font-black transition-all">신용카드</button>
+                    <button type="button" id="btn-a4" onclick="setRef('A4')"
+                        class="flex-1 py-4 border-2 rounded-2xl font-black btn-active">A4 용지</button>
+                    <button type="button" id="btn-card" onclick="setRef('CREDIT_CARD')"
+                        class="flex-1 py-4 border-2 rounded-2xl font-black btn-inactive">신용카드</button>
                 </div>
-                <div class="bg-gray-50 p-2 rounded-2xl border border-gray-100 shadow-inner">
+                <div class="bg-gray-50 p-2 rounded-2xl border border-gray-100">
                     <img src="https://cdn.imweb.me/upload/S20250904697320f4fd9ed/6ae0c52001c90.jpeg"
-                        class="w-full rounded-xl">
+                        class="w-full rounded-xl shadow-sm">
                 </div>
             </div>
 
-            <!-- 3. Photo Queue -->
-            <div class="space-y-4">
-                <p class="text-[11px] font-black text-gray-400 uppercase tracking-widest pl-1">STEP 2. 촬영 목록</p>
-                <div id="photo-list"
-                    class="min-h-[100px] bg-slate-50 border-2 border-dashed border-gray-200 rounded-3xl p-4 flex flex-col gap-3 justify-center">
-                    <p id="photo-empty" class="text-xs text-gray-400 text-center font-bold">등록된 사진이 없습니다. 아래 버튼으로 추가해
-                        주세요.</p>
+            <!-- 3. Step 2 -->
+            <div class="space-y-3">
+                <p class="text-[11px] font-black text-blue-500 uppercase tracking-widest pl-1">STEP 2. 촬영 목록</p>
+                <div id="img-container"
+                    class="min-h-[90px] bg-slate-50 border-2 border-dashed border-gray-200 rounded-3xl p-4 flex flex-col gap-3 justify-center">
+                    <p id="no-img-text" class="text-xs text-gray-400 text-center font-bold">아래 버튼을 눌러 사진을 올려주세요.</p>
                 </div>
             </div>
 
-            <!-- 4. Photo Action -->
-            <div class="bg-blue-50 p-6 rounded-[2.5rem] border border-blue-100 space-y-5">
+            <!-- 4. Pick -->
+            <div class="bg-blue-50 p-6 rounded-[2.5rem] border border-blue-100 space-y-4">
                 <select id="sel-loc"
                     class="w-full bg-white border-blue-100 rounded-xl p-4 font-black text-blue-900 shadow-sm outline-none">
                     <option value="거실">거실</option>
@@ -91,170 +99,163 @@
                     <option value="작은방1">작은방1</option>
                     <option value="작은방2">작은방2</option>
                     <option value="주방">주방</option>
+                    <option value="베란다">베란다</option>
                 </select>
-                <button type="button" id="btn-cam"
-                    class="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-xl shadow-xl hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-3">
-                    <span>📷 사진 촬영/등록</span>
+                <button type="button" id="pick-btn" onclick="document.getElementById('fileInp').click()"
+                    class="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-xl shadow-xl hover:bg-blue-700 active:scale-95 transition-all">
+                    � 사진 촬영/등록
                 </button>
-                <input type="file" id="inp-file" accept="image/*" class="hidden">
+                <input type="file" id="fileInp" accept="image/*" class="hidden" onchange="onFileChanged(this)">
             </div>
 
-            <!-- 5. Final Send -->
-            <button type="button" id="btn-submit"
-                class="w-full py-6 bg-gray-900 text-white rounded-3xl font-black text-xl shadow-2xl hover:bg-black active:scale-[0.98] transition-all">
+            <!-- 5. Submit -->
+            <button type="button" id="sub-btn" onclick="startFinalSubmit()"
+                class="w-full py-6 bg-gray-900 text-white rounded-3xl font-black text-xl shadow-2xl hover:bg-black transition-all">
                 최종 접수 완료하기
             </button>
         </div>
 
-        <!-- Result Screen -->
-        <div id="ui-success" class="hidden p-20 text-center">
-            <div class="text-8xl mb-6">🤝</div>
-            <h2 class="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tighter">SUCCESS!</h2>
-            <p class="text-gray-500 mb-10 font-bold leading-relaxed">접수가 완벽하게 완료되었습니다.<br>조금만 기다려 주시면 연락드리겠습니다!</p>
-            <button onclick="location.reload()"
-                class="w-full py-5 bg-blue-50 text-blue-600 rounded-2xl font-black border-2 border-blue-100">새로
+        <div id="success-ui" class="hidden p-20 text-center">
+            <div class="text-8xl mb-6">🚀</div>
+            <h2 class="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tighter">DONE!</h2>
+            <p class="text-gray-500 mb-10 font-bold leading-relaxed">접수가 완료되었습니다.<br>금방 연락드릴게요!</p>
+            <button onclick="location.reload()" class="w-full py-4 bg-gray-100 rounded-2xl font-bold text-gray-600">추가로
                 접수하기</button>
         </div>
     </div>
 
-    <!-- ONE SOURCE OF TRUTH SCRIPT -->
-    <script type="module">
-        import { ConvexClient } from "https://cdn.jsdelivr.net/npm/convex@1.11.0/dist/browser/index.js";
+    <!-- UI & SCRIPT (ALWAYS WORKS) -->
+    <script>
+        // Global variables
+        var QUEUE = [];
+        var REF_TYPE = 'A4';
+        var CONVEX_SDK = null;
 
-        // 1. App State
-        const STATE = {
-            images: [],
-            ref: 'A4',
-            client: new ConvexClient("https://adventurous-barracuda-87.convex.cloud")
-        };
+        // 1. Phone Masking
+        document.getElementById('cust-phone').addEventListener('input', function (e) {
+            var val = e.target.value.replace(/\D/g, '');
+            var masked = '';
+            if (val.length <= 3) masked = val;
+            else if (val.length <= 7) masked = val.slice(0, 3) + '-' + val.slice(3);
+            else masked = val.slice(0, 3) + '-' + val.slice(3, 7) + '-' + val.slice(7, 11);
+            e.target.value = masked;
+        });
 
-        // 2. DOM Elements
-        const el = {
-            name: document.getElementById('custName'),
-            phone: document.getElementById('custPhone'),
-            refA4: document.getElementById('ref-A4'),
-            refCard: document.getElementById('ref-CARD'),
-            list: document.getElementById('photo-list'),
-            btnCam: document.getElementById('btn-cam'),
-            inpFile: document.getElementById('inp-file'),
-            btnSub: document.getElementById('btn-submit'),
-            loc: document.getElementById('sel-loc'),
-            form: document.getElementById('ui-form'),
-            done: document.getElementById('ui-success')
-        };
-
-        // 3. UI Actions
-        el.refA4.onclick = () => setRef('A4');
-        el.refCard.onclick = () => setRef('CREDIT_CARD');
-
+        // 2. Ref Setting
         function setRef(t) {
-            STATE.ref = t;
-            const active = 'flex-1 py-4 border-2 border-blue-500 rounded-2xl bg-blue-50 text-blue-700 font-black shadow-sm ring-4 ring-blue-50';
-            const inactive = 'flex-1 py-4 border-2 border-gray-100 rounded-2xl bg-white text-gray-400 font-black transition-all';
-            el.refA4.className = t === 'A4' ? active : inactive;
-            el.refCard.className = t === 'CREDIT_CARD' ? active : inactive;
+            REF_TYPE = t;
+            document.getElementById('btn-a4').className = (t === 'A4' ? 'flex-1 py-4 border-2 rounded-2xl font-black btn-active' : 'flex-1 py-4 border-2 rounded-2xl font-black btn-inactive');
+            document.getElementById('btn-card').className = (t === 'CREDIT_CARD' ? 'flex-1 py-4 border-2 rounded-2xl font-black btn-active' : 'flex-1 py-4 border-2 rounded-2xl font-black btn-inactive');
         }
 
-        el.btnCam.onclick = () => el.inpFile.click();
-        el.inpFile.onchange = async (e) => {
-            const file = e.target.files[0];
+        // 3. File Selected
+        async function onFileChanged(input) {
+            var file = input.files[0];
             if (!file) return;
 
-            el.btnCam.innerText = "⏳ 압축 중...";
-            el.btnCam.disabled = true;
+            var btn = document.getElementById('pick-btn');
+            btn.innerText = "⏳ 사진 압축 중...";
+            btn.disabled = true;
 
-            const blob = await new Promise(res => {
-                const r = new FileReader();
-                r.onload = ev => {
-                    const i = new Image();
-                    i.onload = () => {
-                        const c = document.createElement('canvas');
-                        const M = 1600;
-                        let w = i.width, h = i.height;
-                        if (w > h) { if (w > M) { h *= M / w; w = M; } }
-                        else { if (h > M) { w *= M / h; h = M; } }
-                        c.width = w; c.height = h;
-                        c.getContext('2d').drawImage(i, 0, 0, w, h);
-                        c.toBlob(res, 'image/jpeg', 0.85);
+            try {
+                var blob = await new Promise(function (res) {
+                    var reader = new FileReader();
+                    reader.onload = function (e) {
+                        var img = new Image();
+                        img.onload = function () {
+                            var canvas = document.createElement('canvas');
+                            var max = 1600;
+                            var w = img.width, h = img.height;
+                            if (w > h) { if (w > max) { h *= max / w; w = max; } }
+                            else { if (h > max) { w *= max / h; h = max; } }
+                            canvas.width = w; canvas.height = h;
+                            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                            canvas.toBlob(res, 'image/jpeg', 0.85);
+                        };
+                        img.src = e.target.result;
                     };
-                    i.src = ev.target.result;
-                };
-                r.readAsDataURL(file);
-            });
+                    reader.readAsDataURL(file);
+                });
 
-            STATE.images.push({ blob, loc: el.loc.value, ref: STATE.ref });
-            render();
-            el.btnCam.innerText = "📷 사진 촬영/등록";
-            el.btnCam.disabled = false;
-            el.inpFile.value = "";
-        };
+                QUEUE.push({ blob: blob, loc: document.getElementById('sel-loc').value, ref: REF_TYPE });
+                renderList();
+            } catch (err) {
+                alert("사진 처리 에러: " + err);
+            } finally {
+                btn.innerText = "� 사진 촬영/등록";
+                btn.disabled = false;
+                input.value = "";
+            }
+        }
 
-        function render() {
-            document.getElementById('photo-empty').classList.add('hidden');
-            el.list.innerHTML = "";
-            STATE.images.forEach((it, i) => {
-                const url = URL.createObjectURL(it.blob);
-                const row = document.createElement('div');
-                row.className = "flex items-center justify-between bg-white border border-gray-100 p-3 rounded-2xl shadow-sm animate-inside";
-                row.innerHTML = `
-                    <div class="flex items-center gap-4">
-                        <img src="${url}" class="w-16 h-16 object-cover rounded-xl border-2 border-slate-50 shadow-inner">
-                        <div>
-                            <p class="text-sm font-black text-gray-800">${it.loc}</p>
-                            <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest">${it.ref}</p>
-                        </div>
-                    </div>
-                    <button class="w-12 h-12 text-gray-300 font-bold hover:text-red-500">✕</button>
-                `;
-                row.querySelector('button').onclick = () => { STATE.images.splice(i, 1); if (STATE.images.length === 0) location.reload(); else render(); };
-                el.list.appendChild(row);
+        function renderList() {
+            var list = document.getElementById('img-container');
+            document.getElementById('no-img-text').classList.add('hidden');
+            list.innerHTML = "";
+            QUEUE.forEach(function (it, i) {
+                var div = document.createElement('div');
+                div.className = "flex items-center justify-between bg-white border border-gray-100 p-3 rounded-2xl shadow-sm";
+                var url = URL.createObjectURL(it.blob);
+                div.innerHTML = '<div class="flex items-center gap-4"><img src="' + url + '" class="w-14 h-14 object-cover rounded-xl border border-gray-50 shadow-inner"><div><p class="text-sm font-black text-gray-800">' + it.loc + '</p><p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest">' + it.ref + '</p></div></div><button onclick="delImg(' + i + ')" class="w-10 h-10 text-gray-300 hover:text-red-500 font-bold transition-colors">✕</button>';
+                list.appendChild(div);
             });
         }
 
-        // 4. Submission
-        el.btnSub.onclick = async () => {
-            const n = el.name.value.trim();
-            const p = el.phone.value.trim();
-            if (!n || !p) return alert("성함과 연락처를 모두 입력해 주세요.");
-            if (STATE.images.length === 0) return alert("측정 사진을 최소 1장 이상 등록해 주세요.");
+        function delImg(i) {
+            QUEUE.splice(i, 1);
+            if (QUEUE.length === 0) location.reload(); else renderList();
+        }
 
-            el.btnSub.disabled = true;
-            el.btnSub.innerHTML = '<span class="pulse">🚀 전송 중... 잠시만 기다려 주세요</span>';
+        // 4. Initial Fill
+        window.onload = function () {
+            var params = new URLSearchParams(window.location.search);
+            if (params.get('name')) document.getElementById('cust-name').value = params.get('name');
+            if (params.get('phone')) {
+                var p = params.get('phone');
+                document.getElementById('cust-phone').value = p;
+                document.getElementById('cust-phone').dispatchEvent(new Event('input'));
+            }
+            if (window.location.search) window.history.replaceState({}, '', window.location.pathname);
+        };
+    </script>
+
+    <!-- BACKEND (CONVEX) -->
+    <script type="module">
+        import { ConvexClient } from "https://cdn.jsdelivr.net/npm/convex@1.11.0/dist/browser/index.js";
+        window.CONVEX_SDK = new ConvexClient("https://adventurous-barracuda-87.convex.cloud");
+
+        window.startFinalSubmit = async function () {
+            var name = document.getElementById('cust-name').value.trim();
+            var phone = document.getElementById('cust-phone').value.trim();
+            var btn = document.getElementById('sub-btn');
+
+            if (!name || !phone) return alert("성함과 연락처를 입력해 주세요.");
+            if (QUEUE.length === 0) return alert("사진을 최소 1장 이상 등록해 주세요.");
+
+            if (!window.CONVEX_SDK) return alert("서버와 통신 준비 중입니다. 잠시 후 다시 눌러주세요.");
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="pulse-text font-black text-blue-400">🚀 접수 정보 전송 중...</span>';
 
             try {
-                const reqId = await STATE.client.mutation("requests:submit", { name: n, phone: p });
-                for (let i = 0; i < STATE.images.length; i++) {
-                    const it = STATE.images[i];
-                    el.btnSub.innerText = `업로드 중 (${i + 1}/${STATE.images.length})`;
-                    const url = await STATE.client.mutation("images:generateUploadUrl");
-                    const upRes = await fetch(url, { method: "POST", body: it.blob });
-                    const { storageId } = await upRes.json();
-                    await STATE.client.mutation("images:saveImage", { requestId: reqId, storageId, location: it.loc, refType: it.ref });
+                var requestId = await window.CONVEX_SDK.mutation("requests:submit", { name: name, phone: phone });
+                for (var i = 0; i < QUEUE.length; i++) {
+                    var it = QUEUE[i];
+                    btn.innerText = "업로드 중 (" + (i + 1) + "/" + QUEUE.length + ")";
+                    var url = await window.CONVEX_SDK.mutation("images:generateUploadUrl");
+                    var res = await fetch(url, { method: "POST", body: it.blob });
+                    var data = await res.json();
+                    await window.CONVEX_SDK.mutation("images:saveImage", { requestId: requestId, storageId: data.storageId, location: it.loc, refType: it.ref });
                 }
-                el.form.classList.add('hidden');
-                el.done.classList.remove('hidden');
-                alert("성공적으로 접수되었습니다!");
+                document.getElementById('main-ui').classList.add('hidden');
+                document.getElementById('success-ui').classList.remove('hidden');
+                alert("접수가 정상적으로 완료되었습니다!");
             } catch (err) {
-                alert("전송 실패: " + err.message);
-                el.btnSub.disabled = false;
-                el.btnSub.innerText = "최종 접수 완료하기";
+                alert("전송 에러: " + err.message);
+                btn.disabled = false;
+                btn.innerText = "최종 접수 완료하기";
             }
         };
-
-        // 5. Initial Helpers
-        (function () {
-            const params = new URLSearchParams(window.location.search);
-            if (params.get('name')) el.name.value = params.get('name');
-            if (params.get('phone')) el.phone.value = params.get('phone');
-            if (window.location.search) window.history.replaceState({}, '', window.location.pathname);
-
-            el.phone.oninput = (e) => {
-                let v = e.target.value.replace(/\D/g, '');
-                if (v.length > 3 && v.length <= 7) v = v.slice(0, 3) + '-' + v.slice(3);
-                else if (v.length > 7) v = v.slice(0, 3) + '-' + v.slice(3, 7) + '-' + v.slice(7, 11);
-                e.target.value = v;
-            };
-        })();
     </script>
 </body>
 
