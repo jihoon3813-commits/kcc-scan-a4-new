@@ -23,7 +23,69 @@ http.route({
     }),
 });
 
-// 2. 업로드 URL 생성 (HTTP POST)
+// 2. 어드민 목록 조회 (HTTP GET)
+http.route({
+    path: "/list",
+    method: "GET",
+    handler: httpAction(async (ctx) => {
+        const requests = await ctx.runQuery(api.requests.list);
+        return new Response(JSON.stringify(requests), {
+            status: 200,
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Content-Type": "application/json",
+            },
+        });
+    }),
+});
+
+// 3. 어드민 상세 조회 (HTTP GET)
+http.route({
+    path: "/getDetail",
+    method: "GET",
+    handler: httpAction(async (ctx, request) => {
+        const url = new URL(request.url);
+        const requestId = url.searchParams.get("requestId");
+        const data = await ctx.runQuery(api.requests.getDetail, { requestId: requestId as any });
+        return new Response(JSON.stringify(data), {
+            status: 200,
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Content-Type": "application/json",
+            },
+        });
+    }),
+});
+
+// 4. 업데이트 반영 (HTTP POST)
+http.route({
+    path: "/update",
+    method: "POST",
+    handler: httpAction(async (ctx, request) => {
+        const args = await request.json();
+        await ctx.runMutation(api.requests.updateStatus, {
+            requestId: args.requestId,
+            status: args.status,
+            memo: args.memo
+        });
+        if (args.imageId) {
+            await ctx.runMutation(api.images.updateImageResult, {
+                imageId: args.imageId,
+                width: args.width,
+                height: args.height
+            });
+        }
+        return new Response(JSON.stringify({ success: true }), {
+            status: 200,
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Content-Type": "application/json",
+            },
+        });
+    }),
+});
+
+// 5. 업로드 URL 생성 (HTTP POST)
 http.route({
     path: "/generateUploadUrl",
     method: "POST",
@@ -39,7 +101,7 @@ http.route({
     }),
 });
 
-// 3. 이미지 정보 저장 (HTTP POST)
+// 6. 이미지 정보 저장 (HTTP POST)
 http.route({
     path: "/saveImage",
     method: "POST",
@@ -56,18 +118,12 @@ http.route({
     }),
 });
 
-// OPTIONS (CORS 전용)
-http.route({
-    path: "/submit", method: "OPTIONS",
-    handler: httpAction(async () => new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type" } }))
-});
-http.route({
-    path: "/generateUploadUrl", method: "OPTIONS",
-    handler: httpAction(async () => new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type" } }))
-});
-http.route({
-    path: "/saveImage", method: "OPTIONS",
-    handler: httpAction(async () => new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type" } }))
-});
+// OPTIONS HANDLERS
+http.route({ path: "/submit", method: "OPTIONS", handler: httpAction(async () => new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type" } })) });
+http.route({ path: "/list", method: "OPTIONS", handler: httpAction(async () => new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS" } })) });
+http.route({ path: "/getDetail", method: "OPTIONS", handler: httpAction(async () => new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS" } })) });
+http.route({ path: "/update", method: "OPTIONS", handler: httpAction(async () => new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type" } })) });
+http.route({ path: "/generateUploadUrl", method: "OPTIONS", handler: httpAction(async () => new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, OPTIONS" } })) });
+http.route({ path: "/saveImage", method: "OPTIONS", handler: httpAction(async () => new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type" } })) });
 
 export default http;
