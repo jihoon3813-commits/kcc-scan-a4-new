@@ -170,7 +170,12 @@ async function loadRequestDetail(requestId) {
             location_type: img.location,
             reference_type: img.refType,
             width: img.width || 0,
-            height: img.height || 0
+            height: img.height || 0,
+            // Local state to hold unsaved measurements
+            localVals: {
+                w1: img.width || '', w2: '', w3: '',
+                h1: img.height || '', h2: '', h3: ''
+            }
         }));
 
         renderGallery();
@@ -215,9 +220,16 @@ async function saveResult() {
             await convexClient.mutation("images:updateImageResult", { imageId: selectedImageId, width, height });
         }
 
+        // Sync local state to persistent state
+        const imgData = currentImages.find(i => i.id === selectedImageId);
+        if (imgData) {
+            imgData.width = width;
+            imgData.height = height;
+        }
+
         hideLoading();
         alert("데이터가 Convex에 안전하게 저장되었습니다.");
-        loadRequests();
+        // loadRequests(); // Removed auto-reload to prevent losing current view
     } catch (err) {
         console.error(err);
         hideLoading();
@@ -296,6 +308,23 @@ function hideLoading() {
 }
 
 function selectImage(id) {
+    // Before switching, save current image's UI values to memory
+    if (selectedImageId) {
+        const prevImg = currentImages.find(i => i.id === selectedImageId);
+        if (prevImg) {
+            prevImg.localVals = {
+                w1: document.getElementById('w1').value,
+                w2: document.getElementById('w2').value,
+                w3: document.getElementById('w3').value,
+                h1: document.getElementById('h1').value,
+                h2: document.getElementById('h2').value,
+                h3: document.getElementById('h3').value
+            };
+            prevImg.localWidth = document.getElementById('resWidth').value;
+            prevImg.localHeight = document.getElementById('resHeight').value;
+        }
+    }
+
     selectedImageId = id;
     const imgData = currentImages.find(i => i.id === id);
     if (!imgData) return;
@@ -314,9 +343,16 @@ function selectImage(id) {
         resizeCanvas();
         fitImageToCanvas();
         refBox = null; measureLine = null;
-        ['w1', 'w2', 'w3', 'h1', 'h2', 'h3'].forEach(id => document.getElementById(id).value = '');
-        if (imgData.width && imgData.width > 0) document.getElementById('w1').value = imgData.width;
-        if (imgData.height && imgData.height > 0) document.getElementById('h1').value = imgData.height;
+
+        // Restore values from memory
+        const v = imgData.localVals;
+        document.getElementById('w1').value = v.w1;
+        document.getElementById('w2').value = v.w2;
+        document.getElementById('w3').value = v.w3;
+        document.getElementById('h1').value = v.h1;
+        document.getElementById('h2').value = v.h2;
+        document.getElementById('h3').value = v.h3;
+
         updateAverages();
         draw();
     };
@@ -518,12 +554,13 @@ function drawOverlaysToCtx(targetCtx, w, h, isLive = false) {
     if (!namePhone || namePhone === "-") return;
     targetCtx.save();
     const scale = isLive ? (1 / currentScale) : (w / 1200);
-    const fontSize = (isLive ? 16 : 30) * scale;
+    // Increased font size: 16 -> 24 (Live), 30 -> 45 (Export)
+    const fontSize = (isLive ? 24 : 45) * scale;
     targetCtx.font = `black ${fontSize}px sans-serif`;
     targetCtx.fillStyle = 'white';
-    targetCtx.fillText(`${namePhone} | ${locRef}`, 20 * scale, 40 * scale);
+    targetCtx.fillText(`${namePhone} | ${locRef}`, 20 * scale, 50 * scale);
     targetCtx.fillStyle = '#60a5fa';
-    targetCtx.fillText(`W: ${avgW}mm / H: ${avgH}mm`, 20 * scale, 40 * scale + fontSize * 1.3);
+    targetCtx.fillText(`W: ${avgW}mm / H: ${avgH}mm`, 20 * scale, 50 * scale + fontSize * 1.3);
     targetCtx.restore();
 }
 
