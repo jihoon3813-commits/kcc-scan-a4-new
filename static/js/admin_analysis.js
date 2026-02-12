@@ -11,7 +11,8 @@ let startPos = { x: 0, y: 0 };
 
 let mode = 'select'; // select, ref, measure
 let previousMode = 'select';
-let refBox = null;
+let refPoints = null; // [{x,y}, {x,y}, {x,y}, {x,y}]
+let dragPointIndex = -1;
 let isRefLocked = false;
 let measureLine = null;
 
@@ -342,7 +343,7 @@ function selectImage(id) {
         currentImage = img;
         resizeCanvas();
         fitImageToCanvas();
-        refBox = null; measureLine = null;
+        refPoints = null; measureLine = null;
 
         // Restore values from memory
         const v = imgData.localVals;
@@ -390,12 +391,27 @@ function draw() {
     ctx.scale(currentScale, currentScale);
     ctx.drawImage(currentImage, 0, 0);
 
-    if (refBox) {
+    if (refPoints) {
         ctx.strokeStyle = '#22c55e';
         ctx.lineWidth = 3 / currentScale;
-        ctx.strokeRect(refBox.x, refBox.y, refBox.w, refBox.h);
         ctx.fillStyle = 'rgba(34, 197, 94, 0.2)';
-        ctx.fillRect(refBox.x, refBox.y, refBox.w, refBox.h);
+
+        ctx.beginPath();
+        ctx.moveTo(refPoints[0].x, refPoints[0].y);
+        refPoints.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.stroke();
+        ctx.fill();
+
+        // Draw Handles
+        if (mode === 'ref') {
+            ctx.fillStyle = '#22c55e';
+            refPoints.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 6 / currentScale, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
     }
 
     if (measureLine) {
@@ -440,10 +456,31 @@ function onMouseDown(e) {
     const pos = getMousePos(e);
     isDragging = true;
     startPos = pos;
+    dragPointIndex = -1;
+
     if (mode === 'ref') {
-        if (isRefLocked && refBox) return;
-        if (currentScale < 1.5) { zoomToPoint(pos.x, pos.y); isDragging = false; return; }
-        refBox = { x: pos.x, y: pos.y, w: 0, h: 0 };
+        if (isRefLocked && refPoints) return;
+
+        // If near a point, drag it
+        if (refPoints) {
+            const hitRadius = 15 / currentScale;
+            refPoints.forEach((p, i) => {
+                const d = Math.sqrt((p.x - pos.x) ** 2 + (p.y - pos.y) ** 2);
+                if (d < hitRadius) dragPointIndex = i;
+            });
+        }
+
+        if (dragPointIndex === -1) {
+            if (currentScale < 1.5) { zoomToPoint(pos.x, pos.y); isDragging = false; return; }
+            // Create new box as 4 points
+            refPoints = [
+                { x: pos.x, y: pos.y },
+                { x: pos.x, y: pos.y },
+                { x: pos.x, y: pos.y },
+                { x: pos.x, y: pos.y }
+            ];
+            dragPointIndex = 2; // Bottom-right
+        }
     } else if (mode === 'measure') {
         hideFloatingBtn();
         measureLine = { x1: pos.x, y1: pos.y, x2: pos.x, y2: pos.y };
@@ -454,7 +491,19 @@ function onMouseMove(e) {
     if (!isDragging) return;
     const pos = getMousePos(e);
     if (mode === 'select') { offset.x += e.movementX; offset.y += e.movementY; }
-    else if (mode === 'ref') { refBox.w = pos.x - startPos.x; refBox.h = pos.y - startPos.y; }
+    else if (mode === 'ref' && refPoints) {
+        if (dragPointIndex === 2 && refPoints[0].x === startPos.x) {
+            // Initial drawing of rectangle
+            refPoints[1].x = pos.x;
+            refPoints[2].x = pos.x;
+            refPoints[2].y = pos.y;
+            refPoints[3].y = pos.y;
+        } else {
+            // Drag individual corner
+            refPoints[dragPointIndex].x = pos.x;
+            refPoints[dragPointIndex].y = pos.y;
+        }
+    }
     else if (mode === 'measure') { measureLine.x2 = pos.x; measureLine.y2 = pos.y; }
     draw();
 }
@@ -492,10 +541,23 @@ function onWheel(e) {
 }
 
 function calculateRealSize() {
-    if (!refBox || !measureLine) return alert("기준 박스와 측정 선을 모두 그려주세요.");
-    let refLong = currentRefType === 'CREDIT_CARD' ? 85.6 : 297;
-    const calibPx = Math.abs(refBox.w) > Math.abs(refBox.h) ? Math.abs(refBox.w) : Math.abs(refBox.h);
-    const pixelsPerMm = calibPx / refLong;
+    if (!refPoints || !measureLine) return alert("기준 영역과 측정 선을 모두 그려주세요.");
+    let refLongMm = currentRefType === 'CREDIT_CARD' ? 85.6 : 297;
+
+    // Calculate Quad side lengths to find the 'calibration' pixel value
+    // We treat the longest parallel edges as the calibration standard
+    const d = (p1, p2) => Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+    const sides = [
+        d(refPoints[0], refPoints[1]), // top
+        d(refPoints[1], refPoints[2]), // right
+        d(refPoints[2], refPoints[3]), // bottom
+        d(refPoints[3], refPoints[0])  // left
+    ];
+
+    // The longest side (horizontal or vertical) is our reference
+    const calibPx = Math.max(...sides);
+    const pixelsPerMm = calibPx / refLongMm;
+
     const dx = measureLine.x2 - measureLine.x1;
     const dy = measureLine.y2 - measureLine.y1;
     const linePx = Math.sqrt(dx * dx + dy * dy);
@@ -541,7 +603,7 @@ function updateAverages() {
 
 function resetAnalysis() {
     if (!confirm("모든 분석 데이터를 초기화하시겠습니까?")) return;
-    refBox = null; measureLine = null;
+    refPoints = null; measureLine = null;
     ['w1', 'w2', 'w3', 'h1', 'h2', 'h3'].forEach(id => document.getElementById(id).value = '');
     updateAverages();
 }
