@@ -468,11 +468,23 @@ function calculateRealSize() {
     if (Math.abs(dx) > Math.abs(dy)) {
         if (!document.getElementById('w1').value) document.getElementById('w1').value = finalVal;
         else if (!document.getElementById('w2').value) document.getElementById('w2').value = finalVal;
-        else document.getElementById('h1').value = finalVal; // Smart guess
+        else if (!document.getElementById('w3').value) document.getElementById('w3').value = finalVal;
+        else {
+            // Already 3 width meas done, fill heights if empty
+            if (!document.getElementById('h1').value) document.getElementById('h1').value = finalVal;
+            else if (!document.getElementById('h2').value) document.getElementById('h2').value = finalVal;
+            else document.getElementById('h3').value = finalVal;
+        }
     } else {
         if (!document.getElementById('h1').value) document.getElementById('h1').value = finalVal;
         else if (!document.getElementById('h2').value) document.getElementById('h2').value = finalVal;
-        else document.getElementById('h3').value = finalVal;
+        else if (!document.getElementById('h3').value) document.getElementById('h3').value = finalVal;
+        else {
+            // Already 3 height meas done, fill widths if empty
+            if (!document.getElementById('w1').value) document.getElementById('w1').value = finalVal;
+            else if (!document.getElementById('w2').value) document.getElementById('w2').value = finalVal;
+            else document.getElementById('w3').value = finalVal;
+        }
     }
     updateAverages();
 }
