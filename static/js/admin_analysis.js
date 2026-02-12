@@ -13,8 +13,9 @@ let mode = 'select'; // select, ref, measure
 let previousMode = 'select';
 let refPoints = null; // [{x,y}, {x,y}, {x,y}, {x,y}]
 let dragPointIndex = -1;
+let dragMeasureIndex = -1;
 let isRefLocked = false;
-let measureLine = null;
+let measurePoints = null; // [{x,y}, {x,y}, {x,y}, {x,y}]
 
 let currentRefType = 'A4';
 let currentImages = [];
@@ -343,7 +344,7 @@ function selectImage(id) {
         currentImage = img;
         resizeCanvas();
         fitImageToCanvas();
-        refPoints = null; measureLine = null;
+        refPoints = null; measurePoints = null;
 
         // Restore values from memory
         const v = imgData.localVals;
@@ -414,21 +415,27 @@ function draw() {
         }
     }
 
-    if (measureLine) {
+    if (measurePoints) {
         ctx.strokeStyle = '#f87171';
         ctx.lineWidth = 4 / currentScale;
+        ctx.fillStyle = 'rgba(248, 113, 113, 0.1)';
+
         ctx.beginPath();
-        ctx.moveTo(measureLine.x1, measureLine.y1);
-        ctx.lineTo(measureLine.x2, measureLine.y2);
+        ctx.moveTo(measurePoints[0].x, measurePoints[0].y);
+        measurePoints.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
         ctx.stroke();
-        ctx.fillStyle = '#ef4444';
-        [measureLine.x1, measureLine.y1, measureLine.x2, measureLine.y2].forEach((_, i, a) => {
-            if (i % 2 === 0) {
+        ctx.fill();
+
+        // Draw Handles & Labels
+        if (mode === 'measure') {
+            ctx.fillStyle = '#ef4444';
+            measurePoints.forEach((p, i) => {
                 ctx.beginPath();
-                ctx.arc(a[i], a[i + 1], 6 / currentScale, 0, Math.PI * 2);
+                ctx.arc(p.x, p.y, 6 / currentScale, 0, Math.PI * 2);
                 ctx.fill();
-            }
-        });
+            });
+        }
     }
 
     drawOverlaysToCtx(ctx, canvas.width, canvas.height, true);
@@ -483,7 +490,22 @@ function onMouseDown(e) {
         }
     } else if (mode === 'measure') {
         hideFloatingBtn();
-        measureLine = { x1: pos.x, y1: pos.y, x2: pos.x, y2: pos.y };
+
+        if (measurePoints) {
+            const hitRadius = 15 / currentScale;
+            measurePoints.forEach((p, i) => {
+                const d = Math.sqrt((p.x - pos.x) ** 2 + (p.y - pos.y) ** 2);
+                if (d < hitRadius) dragMeasureIndex = i;
+            });
+        }
+
+        if (dragMeasureIndex === -1) {
+            measurePoints = [
+                { x: pos.x, y: pos.y }, { x: pos.x, y: pos.y },
+                { x: pos.x, y: pos.y }, { x: pos.x, y: pos.y }
+            ];
+            dragMeasureIndex = 2;
+        }
     }
 }
 
@@ -504,17 +526,23 @@ function onMouseMove(e) {
             refPoints[dragPointIndex].y = pos.y;
         }
     }
-    else if (mode === 'measure') { measureLine.x2 = pos.x; measureLine.y2 = pos.y; }
+    else if (mode === 'measure' && measurePoints) {
+        if (dragMeasureIndex === 2 && measurePoints[0].x === startPos.x) {
+            measurePoints[1].x = pos.x;
+            measurePoints[2].x = pos.x;
+            measurePoints[2].y = pos.y;
+            measurePoints[3].y = pos.y;
+        } else {
+            measurePoints[dragMeasureIndex].x = pos.x;
+            measurePoints[dragMeasureIndex].y = pos.y;
+        }
+    }
     draw();
 }
 
 function onMouseUp(e) {
     isDragging = false;
-    if (refBox && (refBox.w < 0 || refBox.h < 0)) {
-        if (refBox.w < 0) { refBox.x += refBox.w; refBox.w = Math.abs(refBox.w); }
-        if (refBox.h < 0) { refBox.y += refBox.h; refBox.h = Math.abs(refBox.h); }
-    }
-    if (mode === 'measure' && measureLine) showFloatingBtn(e.clientX, e.clientY);
+    if (mode === 'measure' && measurePoints) showFloatingBtn(e.clientX, e.clientY);
     draw();
 }
 
@@ -541,49 +569,25 @@ function onWheel(e) {
 }
 
 function calculateRealSize() {
-    if (!refPoints || !measureLine) return alert("기준 영역과 측정 선을 모두 그려주세요.");
+    if (!refPoints || !measurePoints) return alert("기준 영역과 측정 영역(사각형)을 모두 그려주세요.");
     let refLongMm = currentRefType === 'CREDIT_CARD' ? 85.6 : 297;
 
-    // Calculate Quad side lengths to find the 'calibration' pixel value
-    // We treat the longest parallel edges as the calibration standard
+    // Pixel to MM ratio from reference
     const d = (p1, p2) => Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
-    const sides = [
-        d(refPoints[0], refPoints[1]), // top
-        d(refPoints[1], refPoints[2]), // right
-        d(refPoints[2], refPoints[3]), // bottom
-        d(refPoints[3], refPoints[0])  // left
-    ];
+    const refSides = [d(refPoints[0], refPoints[1]), d(refPoints[1], refPoints[2]), d(refPoints[2], refPoints[3]), d(refPoints[3], refPoints[0])];
+    const pixelsPerMm = Math.max(...refSides) / refLongMm;
 
-    // The longest side (horizontal or vertical) is our reference
-    const calibPx = Math.max(...sides);
-    const pixelsPerMm = calibPx / refLongMm;
+    // Measurement sides
+    const w1 = d(measurePoints[0], measurePoints[1]); // Top
+    const w2 = d(measurePoints[3], measurePoints[2]); // Bottom (p3 to p2)
+    const h1 = d(measurePoints[0], measurePoints[3]); // Left (p0 to p3)
+    const h2 = d(measurePoints[1], measurePoints[2]); // Right (p1 to p2)
 
-    const dx = measureLine.x2 - measureLine.x1;
-    const dy = measureLine.y2 - measureLine.y1;
-    const linePx = Math.sqrt(dx * dx + dy * dy);
-    const finalVal = Math.round(linePx / pixelsPerMm);
+    document.getElementById('w1').value = Math.round(w1 / pixelsPerMm);
+    document.getElementById('w2').value = Math.round(w2 / pixelsPerMm);
+    document.getElementById('h1').value = Math.round(h1 / pixelsPerMm);
+    document.getElementById('h2').value = Math.round(h2 / pixelsPerMm);
 
-    if (Math.abs(dx) > Math.abs(dy)) {
-        if (!document.getElementById('w1').value) document.getElementById('w1').value = finalVal;
-        else if (!document.getElementById('w2').value) document.getElementById('w2').value = finalVal;
-        else if (!document.getElementById('w3').value) document.getElementById('w3').value = finalVal;
-        else {
-            // Already 3 width meas done, fill heights if empty
-            if (!document.getElementById('h1').value) document.getElementById('h1').value = finalVal;
-            else if (!document.getElementById('h2').value) document.getElementById('h2').value = finalVal;
-            else document.getElementById('h3').value = finalVal;
-        }
-    } else {
-        if (!document.getElementById('h1').value) document.getElementById('h1').value = finalVal;
-        else if (!document.getElementById('h2').value) document.getElementById('h2').value = finalVal;
-        else if (!document.getElementById('h3').value) document.getElementById('h3').value = finalVal;
-        else {
-            // Already 3 height meas done, fill widths if empty
-            if (!document.getElementById('w1').value) document.getElementById('w1').value = finalVal;
-            else if (!document.getElementById('w2').value) document.getElementById('w2').value = finalVal;
-            else document.getElementById('w3').value = finalVal;
-        }
-    }
     updateAverages();
 }
 
@@ -603,7 +607,7 @@ function updateAverages() {
 
 function resetAnalysis() {
     if (!confirm("모든 분석 데이터를 초기화하시겠습니까?")) return;
-    refPoints = null; measureLine = null;
+    refPoints = null; measurePoints = null;
     ['w1', 'w2', 'w3', 'h1', 'h2', 'h3'].forEach(id => document.getElementById(id).value = '');
     updateAverages();
 }
