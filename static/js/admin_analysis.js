@@ -119,12 +119,15 @@ async function loadRequests() {
             const li = document.createElement('li');
             li.className = `p-4 hover:bg-blue-50 cursor-pointer border-b transition-colors ${currentRequestId === req._id ? 'bg-blue-50' : ''}`;
             li.innerHTML = `
-                <div class="flex justify-between items-start">
-                    <div>
+                <div class="flex justify-between items-start group">
+                    <div class="flex-1">
                         <p class="font-bold text-gray-800">${name} <span class="text-blue-500 text-xs">[${imgCount}]</span></p>
                         <p class="text-[10px] text-gray-400">ID: ${req._id.substring(0, 8)}</p>
                     </div>
-                    <span class="text-[10px] px-2 py-0.5 rounded-full font-black ${getStatusColor(status)}">${status}</span>
+                    <div class="flex flex-col items-end gap-2">
+                        <span class="text-[10px] px-2 py-0.5 rounded-full font-black ${getStatusColor(status)}">${status}</span>
+                        <button onclick="deleteRequest('${req._id}', event)" class="opacity-0 group-hover:opacity-100 text-xs text-red-300 hover:text-red-500 transition-all font-black p-1">✕</button>
+                    </div>
                 </div>
                 <p class="text-[10px] text-gray-400 mt-1">${new Date(dateStr).toLocaleString()}</p>
             `;
@@ -138,6 +141,29 @@ async function loadRequests() {
     } catch (err) {
         console.error("Load Error:", err);
         list.innerHTML = '<li class="p-4 text-center text-red-400 font-bold">연결 실패</li>';
+    }
+}
+
+async function deleteRequest(id, e) {
+    if (e) e.stopPropagation();
+    if (!confirm("해당 고객의 모든 자료를 완전히 삭제하시겠습니까?")) return;
+
+    try {
+        if (HTTP_MODE) {
+            await fetch(`${SITE_URL}/delete`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ requestId: id })
+            });
+        } else {
+            await convexClient.mutation("requests:remove", { requestId: id });
+        }
+        alert("성공적으로 삭제되었습니다.");
+        if (currentRequestId === id) location.reload();
+        else loadRequests();
+    } catch (err) {
+        console.error(err);
+        alert("삭제 중 오류가 발생했습니다.");
     }
 }
 
@@ -605,8 +631,19 @@ function updateAverages() {
     draw();
 }
 
+function clearCurrentImage() {
+    if (!confirm("현재 선택된 이미지의 모든 측정값을 초기화하시겠습니까?")) return;
+    refPoints = null; measurePoints = null;
+    ['w1', 'w2', 'w3', 'h1', 'h2', 'h3'].forEach(id => document.getElementById(id).value = '');
+    updateAverages();
+}
+
 function resetAnalysis() {
-    if (!confirm("모든 분석 데이터를 초기화하시겠습니까?")) return;
+    if (!confirm("전체 분석 데이터를 초기화하시겠습니까?")) return;
+    currentImages.forEach(img => {
+        img.localVals = { w1: '', w2: '', w3: '', h1: '', h2: '', h3: '' };
+        img.width = 0; img.height = 0;
+    });
     refPoints = null; measurePoints = null;
     ['w1', 'w2', 'w3', 'h1', 'h2', 'h3'].forEach(id => document.getElementById(id).value = '');
     updateAverages();

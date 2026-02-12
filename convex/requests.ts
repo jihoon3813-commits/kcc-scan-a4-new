@@ -78,3 +78,21 @@ export const updateStatus = mutation({
         await ctx.db.patch(requestId, updates);
     },
 });
+export const remove = mutation({
+    args: { requestId: v.id("requests") },
+    handler: async (ctx, args) => {
+        // 1. Delete associated images and storage
+        const images = await ctx.db
+            .query("images")
+            .withIndex("by_requestId", (q) => q.eq("requestId", args.requestId))
+            .collect();
+
+        for (const img of images) {
+            await ctx.storage.delete(img.storageId);
+            await ctx.db.delete(img._id);
+        }
+
+        // 2. Delete the request itself
+        await ctx.db.delete(args.requestId);
+    },
+});

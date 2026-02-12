@@ -52,3 +52,14 @@ export const analyzeImage = action({
         };
     },
 });
+
+export const remove = mutation({
+    args: { imageId: v.id("images") },
+    handler: async (ctx, args) => {
+        const img = await ctx.db.get(args.imageId);
+        if (img) {
+            await ctx.storage.delete(img.storageId);
+            await ctx.db.delete(img._id);
+        }
+    },
+});
