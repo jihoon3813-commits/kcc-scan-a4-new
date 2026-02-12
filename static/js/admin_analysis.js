@@ -554,13 +554,15 @@ function drawOverlaysToCtx(targetCtx, w, h, isLive = false) {
     if (!namePhone || namePhone === "-") return;
     targetCtx.save();
     const scale = isLive ? (1 / currentScale) : (w / 1200);
-    // Increased font size: 16 -> 24 (Live), 30 -> 45 (Export)
-    const fontSize = (isLive ? 24 : 45) * scale;
-    targetCtx.font = `black ${fontSize}px sans-serif`;
+    // Increased font size 3x as requested: 24 -> 72 (Live), 45 -> 135 (Export)
+    const fontSize = (isLive ? 72 : 135) * scale;
+    targetCtx.font = `bold ${fontSize}px sans-serif`;
     targetCtx.fillStyle = 'white';
-    targetCtx.fillText(`${namePhone} | ${locRef}`, 20 * scale, 50 * scale);
+    targetCtx.shadowColor = 'black';
+    targetCtx.shadowBlur = 4 * scale;
+    targetCtx.fillText(`${namePhone} | ${locRef}`, 20 * scale, 80 * scale);
     targetCtx.fillStyle = '#60a5fa';
-    targetCtx.fillText(`W: ${avgW}mm / H: ${avgH}mm`, 20 * scale, 50 * scale + fontSize * 1.3);
+    targetCtx.fillText(`W: ${avgW}mm / H: ${avgH}mm`, 20 * scale, 80 * scale + fontSize * 1.2);
     targetCtx.restore();
 }
 
