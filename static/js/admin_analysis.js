@@ -225,40 +225,69 @@ async function loadRequestDetail(requestId) {
 }
 
 async function saveResult() {
-    if (!currentRequestId || !selectedImageId) return;
-    showLoading("데이터 저장 중...");
+    if (!currentRequestId || !currentImages || currentImages.length === 0) return;
+    showLoading("모든 데이터 저장 중...");
 
     try {
         const status = document.getElementById('statusSelect').value;
         const memo = document.getElementById('memoText').value;
-        const width = parseFloat(document.getElementById('resWidth').value) || 0;
-        const height = parseFloat(document.getElementById('resHeight').value) || 0;
 
-        if (HTTP_MODE) {
-            await fetch(`${SITE_URL}/update`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    requestId: currentRequestId,
-                    imageId: selectedImageId,
-                    status, memo, width, height
-                })
-            });
-        } else {
+        // 1. Sync currently active image to memory
+        if (selectedImageId) {
+            const currImg = currentImages.find(i => i.id === selectedImageId);
+            if (currImg) {
+                currImg.localVals = {
+                    w1: document.getElementById('w1').value,
+                    w2: document.getElementById('w2').value,
+                    w3: document.getElementById('w3').value,
+                    h1: document.getElementById('h1').value,
+                    h2: document.getElementById('h2').value,
+                    h3: document.getElementById('h3').value
+                };
+            }
+        }
+
+        // 2. Helper to calc average from localVals
+        const calcAvg = (v1, v2, v3) => {
+            const arr = [v1, v2, v3].map(v => parseFloat(v)).filter(n => !isNaN(n) && n > 0);
+            return arr.length === 0 ? 0 : Math.round(arr.reduce((a, b) => a + b) / arr.length);
+        };
+
+        // 3. Save Context (Once)
+        if (!HTTP_MODE) {
             await convexClient.mutation("requests:updateStatus", { requestId: currentRequestId, status, memo });
-            await convexClient.mutation("images:updateImageResult", { imageId: selectedImageId, width, height });
         }
 
-        // Sync local state to persistent state
-        const imgData = currentImages.find(i => i.id === selectedImageId);
-        if (imgData) {
-            imgData.width = width;
-            imgData.height = height;
-        }
+        // 4. Save All Images
+        const promises = currentImages.map(img => {
+            const lv = img.localVals;
+            const finalW = calcAvg(lv.w1, lv.w2, lv.w3);
+            const finalH = calcAvg(lv.h1, lv.h2, lv.h3);
+
+            // Update local state width/height too
+            img.width = finalW;
+            img.height = finalH;
+
+            if (HTTP_MODE) {
+                return fetch(`${SITE_URL}/update`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        requestId: currentRequestId,
+                        imageId: img.id,
+                        status, memo, width: finalW, height: finalH
+                    })
+                });
+            } else {
+                return convexClient.mutation("images:updateImageResult", { imageId: img.id, width: finalW, height: finalH });
+            }
+        });
+
+        await Promise.all(promises);
 
         hideLoading();
-        alert("데이터가 Convex에 안전하게 저장되었습니다.");
-        // loadRequests(); // Removed auto-reload to prevent losing current view
+        alert("전체 이미지 및 분석 결과가 저장되었습니다.");
+
     } catch (err) {
         console.error(err);
         hideLoading();
@@ -690,15 +719,15 @@ function drawOverlaysToCtx(targetCtx, w, h, isLive = false, data = null) {
     if (!namePhone || namePhone === "-") return;
     targetCtx.save();
     const scale = isLive ? (1 / currentScale) : (w / 1200);
-    // Increased font size 3x as requested: 24 -> 72 (Live), 45 -> 135 (Export)
-    const fontSize = (isLive ? 72 : 135) * scale;
+    // Adjusted font size: Reduced based on user feedback (too large)
+    const fontSize = (isLive ? 36 : 60) * scale;
     targetCtx.font = `bold ${fontSize}px sans-serif`;
     targetCtx.fillStyle = 'white';
     targetCtx.shadowColor = 'black';
     targetCtx.shadowBlur = 4 * scale;
-    targetCtx.fillText(`${namePhone} | ${locRef}`, 20 * scale, 80 * scale);
+    targetCtx.fillText(`${namePhone} | ${locRef}`, 20 * scale, 50 * scale);
     targetCtx.fillStyle = '#60a5fa';
-    targetCtx.fillText(`W: ${avgW}mm / H: ${avgH}mm`, 20 * scale, 80 * scale + fontSize * 1.2);
+    targetCtx.fillText(`W: ${avgW}mm / H: ${avgH}mm`, 20 * scale, 50 * scale + fontSize * 1.2);
     targetCtx.restore();
 }
 
