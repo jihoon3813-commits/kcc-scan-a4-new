@@ -672,11 +672,21 @@ function resetAnalysis() {
     updateAverages();
 }
 
-function drawOverlaysToCtx(targetCtx, w, h, isLive = false) {
-    const namePhone = document.getElementById('infoNamePhone').innerText;
-    const locRef = document.getElementById('infoLocationRef').innerText;
-    const avgW = document.getElementById('resWidth').value;
-    const avgH = document.getElementById('resHeight').value;
+function drawOverlaysToCtx(targetCtx, w, h, isLive = false, data = null) {
+    let namePhone, locRef, avgW, avgH;
+
+    if (data) {
+        namePhone = data.namePhone;
+        locRef = data.locRef;
+        avgW = data.avgW;
+        avgH = data.avgH;
+    } else {
+        namePhone = document.getElementById('infoNamePhone').innerText;
+        locRef = document.getElementById('infoLocationRef').innerText;
+        avgW = document.getElementById('resWidth').value;
+        avgH = document.getElementById('resHeight').value;
+    }
+
     if (!namePhone || namePhone === "-") return;
     targetCtx.save();
     const scale = isLive ? (1 / currentScale) : (w / 1200);
@@ -712,6 +722,106 @@ async function copyImageToClipboard() {
     const blob = await new Promise(res => ec.toBlob(res, 'image/png'));
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
     alert("분석 이미지가 복사되었습니다.");
+}
+
+async function downloadAllImages() {
+    if (!currentImages || currentImages.length === 0) return alert("다운로드할 이미지가 없습니다.");
+
+    // Save current image's changes first if any
+    if (selectedImageId) {
+        const prevImg = currentImages.find(i => i.id === selectedImageId);
+        if (prevImg) {
+            prevImg.localVals = {
+                w1: document.getElementById('w1').value,
+                w2: document.getElementById('w2').value,
+                w3: document.getElementById('w3').value,
+                h1: document.getElementById('h1').value,
+                h2: document.getElementById('h2').value,
+                h3: document.getElementById('h3').value
+            };
+        }
+    }
+
+    showLoading("전체 이미지 압축 중...");
+
+    try {
+        if (typeof JSZip === 'undefined') {
+            throw new Error("JSZip library not loaded");
+        }
+
+        const zip = new JSZip();
+        const mainFolder = zip.folder(`SmartScan_${currentRequestId.substring(0, 8)}`);
+
+        // Helper to load image
+        const loadImage = (src) => new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error(`Failed to load ${src}`));
+            img.src = src;
+        });
+
+        // Helper to calculate avg
+        const calc = (vals) => {
+            const valid = vals.filter(v => !isNaN(v) && v > 0);
+            return valid.length === 0 ? 0 : Math.round(valid.reduce((a, b) => a + b) / valid.length);
+        };
+
+        const getAvg = (v) => {
+            if (!v) return { w: 0, h: 0 };
+            const w = [v.w1, v.w2, v.w3].map(parseFloat);
+            const h = [v.h1, v.h2, v.h3].map(parseFloat);
+            return { w: calc(w), h: calc(h) };
+        };
+
+        const fullInfo = document.getElementById('infoNamePhone').innerText;
+
+        for (let i = 0; i < currentImages.length; i++) {
+            const item = currentImages[i];
+            const img = await loadImage(item.image_path);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+
+            let wVal = item.width, hVal = item.height;
+            // Prefer local calculated values
+            if (item.localVals) {
+                const avgs = getAvg(item.localVals);
+                if (avgs.w > 0) wVal = avgs.w;
+                if (avgs.h > 0) hVal = avgs.h;
+            }
+
+            const data = {
+                namePhone: fullInfo,
+                locRef: `${item.location_type} / ${item.reference_type}`,
+                avgW: wVal,
+                avgH: hVal
+            };
+
+            drawOverlaysToCtx(ctx, canvas.width, canvas.height, false, data);
+
+            // Add to zip
+            const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+            mainFolder.file(`${item.location_type}_${i + 1}.png`, blob);
+        }
+
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(zipBlob);
+        link.download = `SmartScan_All_${currentRequestId.substring(0, 8)}.zip`;
+        link.click();
+
+        hideLoading();
+        alert("전체 다운로드가 완료되었습니다.");
+
+    } catch (err) {
+        console.error(err);
+        hideLoading();
+        alert("다운로드 중 오류가 발생했습니다: " + err.message);
+    }
 }
 
 init();

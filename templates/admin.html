@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap"
         rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         body {
             font-family: 'Noto Sans KR', sans-serif;
@@ -268,9 +269,12 @@
                                 <button onclick="downloadImage()"
                                     class="py-3 px-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black italic uppercase tracking-tighter text-slate-500 hover:bg-slate-100 transition-all">📥
                                     Download</button>
+                                <button onclick="downloadAllImages()"
+                                    class="py-3 px-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black italic uppercase tracking-tighter text-slate-500 hover:bg-slate-100 transition-all">📦
+                                    All Down</button>
                                 <button onclick="copyImageToClipboard()"
-                                    class="py-3 px-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black italic uppercase tracking-tighter text-slate-500 hover:bg-slate-100 transition-all">📋
-                                    Copy</button>
+                                    class="py-3 px-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black italic uppercase tracking-tighter text-slate-500 hover:bg-slate-100 transition-all col-span-2">📋
+                                    Copy to Clipboard</button>
                             </div>
                             <div class="grid grid-cols-2 gap-2 pt-1">
                                 <button onclick="clearCurrentImage()"
