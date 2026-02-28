@@ -58,14 +58,18 @@ async function initConvex() {
     if (statusTxt) statusTxt.innerText = "CONNECTING";
 
     const sources = [
-        "https://esm.sh/convex@1.11.0?bundle",
         "https://cdn.jsdelivr.net/npm/convex@1.11.0/dist/browser/index.js",
+        "https://esm.sh/convex@1.11.0?bundle",
         "https://unpkg.com/convex@1.11.0/dist/browser/index.js"
     ];
 
     for (let src of sources) {
         try {
-            const { ConvexClient } = await import(src);
+            // Add a timeout to the import to avoid waiting too long for a single failed CDN
+            const importPromise = import(src);
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000));
+
+            const { ConvexClient } = await Promise.race([importPromise, timeoutPromise]);
             convexClient = new ConvexClient(CONVEX_URL);
             console.log("Admin: Connected via " + src);
 
@@ -78,7 +82,7 @@ async function initConvex() {
             loadRequests();
             return;
         } catch (e) {
-            console.warn(`Source ${src} failed for admin...`);
+            console.warn(`Source ${src} failed or timed out...`);
         }
     }
 
